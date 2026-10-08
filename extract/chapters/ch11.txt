@@ -1,0 +1,733 @@
+
+@@PAGE 370@@
+11 Optimizing Multi-Agent Systems
+This chapter covers:
+ 
+What to optimize, when to optimize, and how to prioritize optimization
+efforts
+Ten common failure modes in production multi-agent systems and
+concrete strategies to address each
+The two-level optimization framework: agent-system parameters vs
+model-level parameters
+Using evaluation-driven iteration to systematically improve multi-agent
+system performance
+11.1 Introduction
+At this point, you should be familiar with agents (Chapter 4), common multi-
+agent patterns (Chapter 2), and how to evaluate performance (Chapter 10).
+The next logical step: how do we systematically improve performance?
+When I think of optimization, I recall my early experiences as a kid fixing
+internal combustion engines with my dad. We fixed our own cars (a Peugeot
+505 and 504) and diesel engines coupled to an alternator for electricity
+generation. We followed a simple two-state process: first, get the engine
+running as a baseline; second, iteratively observe the signals (engine sound,
+how it revved) and tweak parameters (spark plug cleanliness, fuel mixture,
+ignition timing) to achieve optimal performance.
+With agents, we follow the same process. We have signals to measure
+(evaluation metrics from Chapter 10). We have parameters to adjust
+(instructions, tools, orchestration patterns). The question is: which
+parameters deliver the most improvement with the least effort? This chapter
+answers that question by establishing an optimization priority framework
+and examining ten common failure modes that tell you exactly what needs
+fixing. Most of these notes apply to autonomous multi-agent orchestration
+
+@@PAGE 371@@
+patterns, where errors frequently arise from the flexibility and autonomy of
+these systems.
+The optimization loop is straightforward: measure (run evaluation), analyze
+(identify failures), modify (adjust parameters), validate (re-run evaluation),
+and repeat.
+Figure 11.1: An optimization loop for multi-agent systems showing the iterative cycle: Measure (run evaluations) → Analyze (identify failures) → Modify (adjust parameters) →
+Validate (re-run evaluation) → Repeat.
+The challenge isn’t the loop itself—it’s knowing which parameters to adjust
+for maximum impact.
+11.2 What to Optimize, When to Optimize,
+and How to Optimize
+Multi-agent systems have two optimization levels, each requiring different
+expertise and offering different return on investment:
+Model-level parameters (lowest level):
+
+@@PAGE 372@@
+This includes the LLM weights, architecture, hyperparameters, and training
+data. While important, optimizing model-level parameters typically requires
+deep ML expertise and significant computational resources—usually outside
+the scope of application-level optimization.
+Agent-system parameters (application level):
+ 
+Instructions: System prompts, behavioral guidelines, task-specific
+directions
+Tools: Which capabilities to provide (search, calculation, file
+operations)
+Memory: What context to retain and retrieve across interactions
+Model selection: GPT-4 vs GPT-3.5 vs fine-tuned variants
+Orchestration patterns: Workflow vs autonomous (see Chapter 2)
+Termination conditions: When to stop (max rounds, token limits, task
+completion signals)
+Human delegation: Which actions require approval (risk-based
+policies)
+The optimization question: Given measurements from evaluation, which
+parameters should we adjust and how?
+Optimization priority—start where impact is highest:
+1. Start with agent-system parameters: This is where you’ll get the most
+leverage with the least effort. Take an iterative approach informed by
+evaluation data—critically inspect failures and draw correlations to these
+parameters.
+Instructions and tools have the most direct impact on agent behavior. When
+evaluation reveals failures, first check: are instructions specific enough?
+Does the agent have the right tools? These simple fixes often yield
+significant gains before considering model changes or orchestration
+complexity.
+Model selection matters—frontier models (GPT-5, Claude 4.5) have much
+better instruction-following than smaller models. However, reasoning
+models can sometimes degrade performance in multi-agent systems when
+
+@@PAGE 373@@
+they attempt to take on more than they’re designed for (e.g., the
+orchestrator’s role).
+Once individual agents work reasonably well, experiment with orchestration
+patterns and termination conditions. Use evaluation metrics to compare
+performance across patterns. In Chapter 10 (Section 10.6.5), we showed that
+for simple reasoning tasks, Direct-Model (9.7/10) beat Multi-Agent-AI
+(9.3/10)—multi-agent overhead provided no benefit in that specific use case.
+Improving termination conditions (using 
+TaskStatusTool with aligned
+instructions) significantly reduced token usage and improved reliability.
+2. Optimize model-level parameters last: Model training is resource-
+intensive and requires specialized expertise. Only pursue this if specific
+conditions warrant it: (1) need to reduce cost/latency significantly (small
+models are 20-30x cheaper), (2) privacy/compliance reasons preclude third-
+party models, or (3) agent-system optimization has reached diminishing
+returns.
+The typical trajectory: optimize agent-system parameters until performance
+plateaus (often 95%+ with frontier models), then consider finetuning smaller
+models on collected execution data. We cover when finetuning is warranted
+and the practical workflow in Section 11.3.2.
+11.3 
+Why 
+Autonomous 
+Multi-Agent
+Systems Fail in Production
+In this section, we explore 10 common reasons why autonomous multi-agent
+systems fail in production settings, along with concrete strategies to address
+each failure mode. After two years building the AutoGen framework and
+supporting production deployments, I’ve observed that multi-agent systems
+fail in consistent, predictable ways. Understanding these failure modes tells
+you exactly what to optimize. Treat this as a checklist to diagnose and fix
+your multi-agent systems.
+11.3.1 Your Agents Lack Detailed Instructions
+
+@@PAGE 374@@
+The Problem: Agents are driven by LLMs, which require careful prompting.
+Vague or incomplete instructions lead to unpredictable behavior and poor
+performance.
+Vague instructions like "Help with research tasks" tell agents almost nothing
+about how to operate. Effective instructions resemble comprehensive job
+descriptions covering behavioral guidelines, tool selection, constraints,
+output formatting, and error handling. We covered instruction design in
+Chapter 4 (Chapter  4)—the optimization key is expanding instructions
+iteratively based on evaluation failures. When agents fail on specific test
+cases, add guidance addressing those failure modes.
+Optimization Strategy: Use your evaluation results to systematically
+expand instructions. When agents fail on specific test cases, add guidance
+addressing those failure modes. Treat instructions as living documentation
+that evolves with your understanding of the task. Great agent prompts can
+be pages long!
+11.3.2 Stop Using Small Models (Without Optimization)
+The Problem: The capability gap between model sizes is significant.
+Smaller models show dramatically reduced instruction-following and
+struggle with the complex reasoning required for multi-agent coordination.
+This creates a dilemma: frontier models (GPT-5, Claude 4.5) deliver strong
+performance but at 20-30x the cost of smaller models. For high-volume
+production deployments, this difference is substantial.
+The Reality: Smaller models won’t match frontier performance out of the
+box. Your Llama-7B or Qwen3B models will require significant
+optimization or finetuning to approach GPT-4/Claude-level performance.
+But “use bigger models” isn’t always practical given cost constraints—
+frontier models cost 20-30x more than small models at scale.
+The Solution: The optimization trajectory typically follows this path:
+ 
+
+@@PAGE 375@@
+1. Start with frontier models to establish baseline performance and
+understand task requirements
+2. Optimize agent-system parameters (instructions, tools, orchestration)
+with the frontier model
+3. Consider 
+model-level 
+optimization 
+only 
+after 
+agent-system
+optimization plateaus:
+Routing: Direct simple queries to small models, complex ones to
+large models (can achieve 90% performance at 15% cost)
+Distillation: Train small models on frontier model outputs to
+transfer capabilities
+Cascading: Try small model first, escalate to large model only on
+failure
+When Is Finetuning Actually Warranted?
+After optimizing agent-system parameters, analyze your remaining failures.
+Two scenarios justify model-level optimization:
+Scenario 1: Residual failures that parameters can’t fix. Ask: why is the
+system still failing? Common culprits:
+ 
+Out-of-distribution problems: Your domain involves knowledge rare
+in training data (e.g., chemistry of uncommon materials, niche
+regulatory frameworks)
+Counterintuitive business logic: Correct behavior violates common
+patterns (e.g., hanging up on a customer early is sometimes the right
+outcome in your call center)
+Long-tail edge cases: Solutions that appear in your business but rarely
+in general text
+These failures signal that the model lacks domain-specific reasoning patterns
+—exactly what finetuning addresses.
+Scenario 2: Efficiency optimization at full performance. Even at 100%
+accuracy, finetuning may be warranted for cost, latency, or privacy. The key
+insight: your business domain is scoped. Frontier models carry strong
+reasoning capabilities (needed) plus broad world knowledge (not needed for
+
+@@PAGE 376@@
+your task). SFT and RL finetuning help smaller models retain reasoning for
+your specific domain while reallocating capacity away from unused general
+knowledge. This is why a 7B model finetuned on your task can sometimes
+match a 70B generalist.
+The Practical Workflow:
+
+@@PAGE 377@@
+
+@@PAGE 378@@
+Figure 11.2: The model optimization decision framework. Most teams reach “Done!” after agent-system tuning achieves 95%+ accuracy. Finetuning is only warranted for residual
+domain-specific failures or efficiency requirements (cost, latency, privacy).
+ 
+1. Define tasks in a dataset with expected outputs
+2. Build evaluations to quantify performance (see Chapter 10)
+3. Tune agent-system parameters iteratively—inspect trajectories, ask
+“why is this failing?”, adjust prompts, tools, termination conditions
+4. Reach the plateau (often 95%+ with frontier models)
+5. Analyze residual failures—if they fall into Scenario 1 or 2 above,
+proceed to finetuning
+6. Collect execution traces from your optimized system to create training
+data
+Academic work supports this approach. Luo et al. (Luo et al. 2025)
+demonstrated training LLMs within agents using RL by collecting execution
+traces automatically. However, this remains task-specific (can’t train once
+for all agents) and requires defining explicit reward functions.
+These model-level techniques require ML infrastructure and expertise—
+they’re advanced optimizations to pursue after exhausting agent-system
+improvements.
+11.3.3 Your Agent Instructions Don’t Match Your LLM
+The Problem: Developers often underestimate model differences. System
+messages aren’t portable across versions of the same model, let alone across
+different providers. Simply changing models while expecting similar
+behavior is a common and costly mistake.
+Consider this instruction that works well with GPT-4:
+instructions = """Analyze the data and provide insights.
+Think step-by-step about patterns, then formulate
+3-5 key recommendations."""
+This might work perfectly with GPT-4’s strong reasoning capabilities. But
+with a smaller model, the vague “think step-by-step” and “provide insights”
+
+@@PAGE 379@@
+may produce inconsistent results.
+The Solution: Treat instructions as model-specific assets:
+# Model-specific instruction registry
+INSTRUCTIONS = {
+    "gpt-4": """Analyze the data and provide insights.
+        Think step-by-step about patterns, then formulate
+        3-5 key recommendations.""",
+    "gpt-3.5-turbo": """Follow these exact steps:
+        1. List all data points in the dataset
+        2. Identify the 3 highest and 3 lowest values
+        3. Check for patterns (increasing, decreasing, cyclical)
+        4. For each pattern found, write one specific recommendation
+        Format each recommendation as:
+        - Pattern: [what you observed]
+        - Recommendation: [specific action]""",
+}
+def create_agent(model: str):
+    return Agent(
+        name="analyst",
+        instructions=INSTRUCTIONS[model],
+        model=model
+    )
+Optimization Strategy:
+ 
+Maintain separate instruction sets for different model families
+Version control prompts alongside model choices
+Run A/B tests when switching models, not just on new tasks
+Use your evaluation framework to validate that instruction changes
+preserve performance
+
+@@PAGE 380@@
+The evaluation infrastructure from Chapter 10 becomes critical here: you can
+systematically test whether model changes affect performance on your
+specific tasks.
+11.3.4 Your Agents Lack Good Tools
+The Problem: Tools define an agent’s action space. Agent reliability is
+directly limited by tool quality. A common mistake is building many general-
+purpose tools rather than fewer excellent, domain-specific ones, or just not
+investing in designing tools for production use.
+The Solution: Invest in a catalog of battle-tested tools. PicoAgents provides
+three categories of built-in tools that you can use as templates for your own
+production tools:
+Core Tools (universal utilities, no external dependencies):
+ 
+ThinkTool - Enables structured reasoning during complex tasks (based on
+Anthropic’s research showing 54% performance improvement)
+TaskStatusTool - Forces explicit evaluation of task completion with
+rationale
+CalculatorTool - Safe mathematical expression evaluation
+DateTimeTool - Current time, parsing, and formatting operations
+JSONParserTool - JSON parsing and path extraction
+RegexTool - Pattern matching and text manipulation
+Research Tools (information retrieval):
+ 
+GoogleSearchTool / WebSearchTool - Web search with domain filtering for
+security
+WebFetchTool - Fetch and extract content from URLs (HTML, text, or
+markdown)
+ArxivSearchTool - Academic paper search
+YouTubeCaptionTool - Extract transcripts from YouTube videos
+Coding Tools (file operations and code execution):
+ 
+
+@@PAGE 381@@
+ReadFileTool / WriteFileTool - File I/O with workspace isolation
+ListDirectoryTool - Directory browsing
+GrepSearchTool - Pattern search across files
+BashExecuteTool - Safe command execution with timeouts
+PythonREPLTool - Isolated Python code execution
+You can explore complete implementations in the Book’s GitHub repository
+and see usage examples throughout examples/agents/, examples/workflows/, and
+examples/orchestration/. We covered tool design and implementation patterns in
+Chapter 4 (Section 4.6.3).
+Key principles for production tools:
+ 
+1. Reliability over breadth: Better to have 10 excellent tools than 50
+mediocre ones (agents get confused as the toolspace grows and fills up
+context)
+2. Clear error handling: Tools should never crash agents—return
+structured errors
+3. Explicit constraints: Document rate limits, data freshness, failure
+modes
+4. Retry logic: Implement backoff strategies for transient failures
+5. Validation: Check tool outputs before returning to agents
+Focus tool development on domain-specific business operations rather than
+general utilities. Production agents need reliable tools tailored to your
+specific workflows.
+11.3.5 Your Agents Don’t Know When to Stop
+The Problem: Termination conditions control both cost and reliability. Poor
+termination logic leads to runaway processes consuming tokens or premature
+exits that abandon solvable tasks.
+Consider this common antipattern:
+# Ineffective: Agent never told to produce this pattern
+termination = TextMentionTermination(
+
+@@PAGE 382@@
+    text="TASK_COMPLETE"  # But agent instructions never mention this!
+)
+agent = Agent(
+    name="research_agent",
+    instructions="Research the topic and provide findings."
+    # No instruction to say "TASK_COMPLETE"
+)
+workflow = SequentialWorkflow(
+    agents=[agent],
+    termination=termination
+)
+# This will run until hitting max_rounds or timeout!
+The Solution: Align termination conditions with agent capabilities. We
+covered termination patterns like MaxMessageTermination, TokenUsageTermination,
+TimeoutTermination, and CompositeTermination in Chapter 7 (Section  7.2). Better
+yet, use the TaskStatusTool to let agents explicitly signal completion:
+agent = Agent(
+    name="research_agent",
+    instructions="""Research the topic and provide findings.
+    When finished, call the task_status tool with:
+    - status='complete' if all requirements met
+    - status='incomplete' if you hit limitations
+    - rationale explaining your assessment""",
+    tools=[search_tool, task_status_tool]
+)
+Optimization Strategy: Use evaluation data to calibrate termination
+conditions. Track metrics like:
+ 
+Average rounds to completion for successful tasks
+Token usage distribution across test cases
+Failure modes (timeout vs. max rounds vs. task completion)
+
+@@PAGE 383@@
+Set conservative limits during development, then tighten based on
+production data. Remember: it’s better to terminate early with partial results
+than to waste resources on divergent trajectories.
+11.3.6 You Have the Wrong Multi-Agent Pattern
+The Problem: Multi-agent systems exist on a spectrum from explicit
+workflow control to autonomous emergent behavior (see Chapter 2). Pattern
+selection profoundly impacts cost, reliability, and system behavior. The
+wrong choice wastes resources or fails to deliver multi-agent benefits.
+The key optimization insight: more autonomous patterns aren’t
+inherently better—they trade predictability for flexibility. The question is
+which trade-off matches your task characteristics.
+Empirical Evidence from Chapter 10:
+Our comprehensive evaluation (Section  10.6.5) compared Direct-Model,
+Single-Agent-Tools, Multi-Agent-RoundRobin, and Multi-Agent-AI across
+different task types. The results revealed clear patterns:
+ 
+Simple-Reasoning tasks: Direct-Model won (9.7/10) vs Multi-Agent-
+AI (9.3/10). Multi-agent overhead provided no benefit.
+Tool-Heavy tasks: Multi-agent approaches excelled (9.2/10) vs Direct-
+Model (6.8/10). Tool coordination justified the complexity.
+Token efficiency: Direct-Model used 1x tokens, Multi-Agent-AI used
+43x tokens. The cost difference is substantial.
+The Optimization Principle: Start with the simplest pattern that could
+work. Add complexity only when evaluation demonstrates clear benefits. A
+well-designed single agent often outperforms a poorly designed multi-agent
+system.
+Pattern Selection Guide:
+Table  11.1 maps task characteristics to appropriate patterns. We covered
+these patterns in depth in Chapter 2 (Chapter 2).
+
+@@PAGE 384@@
+Table 11.1: Pattern Selection Guide Based on Task Characteristics
+Task
+Characteristic
+Pattern
+Trade-off
+Fixed, known steps Sequential Workflow
+Predictable 
+cost, 
+easy
+debugging, low flexibility
+Conditional routing Conditional/Supervisor Explicit branching, bounded
+execution
+Independent
+subtasks
+Parallel Workflow
+Maximum throughput, clear
+fan-in/fan-out
+Unknown
+decomposition
+Plan-Based
+Orchestration
+Dynamic 
+planning, 
+adds
+overhead per step
+Uncertain solution
+path
+AI-Driven
+Orchestration
+Emergent 
+collaboration,
+unbounded cost
+Optimization Strategy:
+ 
+1. Prototype with workflows: Start with sequential/conditional patterns
+2. Measure with evaluation: Run your test suite, track success rate and
+token usage
+3. Identify bottlenecks: Where does the fixed path fail?
+4. Selectively add autonomy: Convert specific bottleneck sections, not
+the entire system
+5. Validate improvement: Ensure complexity buys measurable gains
+Common Anti-Pattern:
+Don’t use AI-driven orchestration for linear tasks:
+# Anti-pattern: 3-5x cost for no benefit
+expensive = AIOrchestrator(
+    agents=[fetch_agent, transform_agent, save_agent]
+)
+# Better: Deterministic, fast, cheap
+efficient = SequentialWorkflow(
+
+@@PAGE 385@@
+    agents=[fetch_agent, transform_agent, save_agent]
+)
+Production systems often use hybrid approaches: plan-based orchestration
+for top-level coordination, workflows for predictable subtasks. Microsoft’s
+Magentic-One (Fourney et al. 2024) and Anthropic’s research system
+(Hadfield et al. 2025) both demonstrate this task-aware pattern switching.
+11.3.7 Your Agents Aren’t Learning (Memory)
+The Problem: Most agent examples seen in the wild are stateless—they
+don’t retain knowledge from previous interactions or improve over time.
+Each conversation starts from scratch, repeating the same mistakes.
+The Solution: Implement memory systems that enable learning. In Chapter
+4 (Section  4.7), we covered two memory management approaches:
+application-managed (developer calls memory.add() to store, framework
+injects via get_context()) and agent-managed (Section  4.8) (agents use
+memory tools to actively organize their own knowledge). Both approaches
+use vector databases for semantic search and support various backends
+(ChromaDB, Qdrant, Pinecone).
+Optimization Consideration: Memory adds latency (retrieval) and cost
+(embedding, storage). Use evaluation to determine:
+ 
+Does memory improve task success rate enough to justify the
+overhead?
+How many memories provide diminishing returns?
+Which tasks benefit most from memory?
+Not every agent needs memory. Stateless agents are simpler and faster for
+independent tasks.
+11.3.8 Your Agents Lack Metacognition
+The Problem: Long-running complex tasks benefit from self-reflection—
+the ability to plan, review progress, and recognize when current approaches
+
+@@PAGE 386@@
+aren’t working. Without metacognition, agents can’t abandon compromised
+trajectories or reset when stuck.
+The Solution: Implement metacognitive capabilities through reflection
+loops. We covered the Plan-Based pattern in Chapter 2 (Chapter  2) and
+implemented it in Chapter 7 (Section 7.5). The PlanBasedOrchestrator provides
+built-in metacognition: creates initial plan (Section  7.5.1), executes steps,
+evaluates progress after each step (Section 7.5.2), and replans if progress is
+insufficient (Section 7.5.3). Microsoft’s Magentic-One (Fourney et al. 2024)
+demonstrates similar self-monitoring, showing up to 31% performance
+improvement through their “ledger” system.
+Optimization Tradeoff: Metacognition adds LLM calls for reflection but
+can prevent wasted computation on failing trajectories. Use evaluation to
+measure whether the reflection overhead is justified by improved success
+rates.
+11.3.9 You Don’t Have Evals for Your Tasks
+The Problem: Without evaluation frameworks, you can’t understand current
+performance or how configuration changes impact results. This makes
+optimization a guessing game.
+We covered evaluation comprehensively in Chapter 10. The optimization
+connection is direct: you cannot optimize what you cannot measure.
+The Minimum Viable Evaluation:
+from picoagents.eval import (
+    EvalRunner, ExactMatchJudge, AgentEvalTarget)
+from picoagents.types import Task
+# 1. Define tasks with clear expected outputs
+tasks = [
+    Task(
+        name="weather_tool",
+        input="What's the weather in Paris?",
+        expected_output="Use weather API tool",
+
+@@PAGE 387@@
+        category="tool_usage"
+    ),
+    Task(
+        name="summarization",
+        input="Summarize this article: ...",
+        expected_output="concise summary",
+        category="summarization"
+    )
+]
+# 2. Create judge and runner
+judge = ExactMatchJudge()
+runner = EvalRunner(judge=judge)
+# 3. Evaluate each configuration
+scores_v1 = await runner.evaluate(
+    AgentEvalTarget(agent_v1), tasks)
+scores_v2 = await runner.evaluate(
+    AgentEvalTarget(agent_v2), tasks)
+11.3.10 Your Agents Don’t Know When to Delegate to Humans
+The Problem: To agents, all actions appear equal. Fetching weather data and
+transferring money carry the same weight without proper risk assessment.
+This creates serious reliability and safety concerns.
+The Solution: Implement cost-aware action delegation, a UX principle we
+covered in Section 3.4.2. Actions have varying levels of consequence—the
+potential impact if the action contains errors or is inappropriate. The
+optimization challenge is implementing the cost assessment and approval
+mechanisms.
+PicoAgents Implementation:
+Tools support ApprovalMode to control execution:
+from picoagents.tools import tool, ApprovalMode
+from picoagents.agents import Agent
+
+@@PAGE 388@@
+# Low-risk tool: executes immediately
+@tool
+def search_web(query: str) -> str:
+    """Search the web for information."""
+    return f"Search results for: {query}"
+# High-risk tool: requires approval
+@tool(approval_mode="always_require")
+def send_email(to: str, subject: str, body: str) -> str:
+    """Send an email to a recipient."""
+    return f"Email sent to {to}"
+@tool(approval_mode="always_require")
+def delete_database_record(table: str, record_id: int) -> str:
+    """Delete a record from the database."""
+    return f"Deleted record {record_id} from {table}"
+# Agent with mixed-risk tools
+agent = Agent(
+    name="assistant",
+    model_client=model,
+    tools=[search_web, send_email, delete_database_record]
+)
+# When agent calls high-risk tool, execution pauses
+response = await agent.run(
+    "Research competitors and email report to boss@company.com"
+)
+if response.needs_approval:
+    # Agent found information and wants to send email
+    # User can review and approve/reject
+    approval_requests = response.approval_requests
+    for request in approval_requests:
+        print(f"Tool: {request.tool_name}")
+
+@@PAGE 389@@
+        print(f"Parameters: {request.parameters}")
+        # User decides: approve or reject
+Cost Classification Framework:
+Table 11.2: Tool Risk Levels and Approval Requirements
+Risk
+Level
+Characteristics
+Examples
+Approval Mode
+Low
+Read-only, no side
+effects
+Search, calculate, read
+files
+NEVER 
+(auto-
+execute)
+High
+Irreversible or costly Send email, delete data,
+payments
+ALWAYS 
+(require
+approval)
+Optimization Consideration: Human-in-the-loop adds latency but prevents
+catastrophic failures. The tradeoff depends on your domain:
+ 
+Research assistant: Most actions low-risk, optimize for speed
+Customer service: Occasional high-risk (refunds), approval for those
+only
+Financial trading: Every action high-risk, require approval
+The cost-aware delegation principle from Chapter 3 becomes an
+optimization concern here: balance safety (prevent catastrophic actions)
+against speed (minimize approval friction). Use evaluation to measure
+whether approval policies are too strict (>95% approval rate suggests over-
+cautious flagging) or too lenient (missing actual risks in test cases).
+11.3.11 Bonus: You Probably Don’t Need a Multi-Agent System
+The Problem: Multi-agent architectures add complexity. Multiple agents
+collaborating with autonomy increases the surface area for errors and
+reliability issues.
+Before implementing any multi-agent system, honestly evaluate whether
+your task requires this complexity.
+Decision Checklist:
+
+@@PAGE 390@@
+Use multi-agent systems when your task has (see Section  1.3 for detailed
+discussion):
+ 
+1. Decomposability (Planning): Task can be broken into distinct steps
+leading to a goal
+2. Diverse perspectives (Diverse Expertise): Steps map to different
+domains or expertise areas
+3. Extensive context: Individual steps involve processing substantial
+information
+4. Adaptive requirements (Adaptive Solutions): Solution unknown until
+actions are taken and evaluated
+When Single Agents Suffice:
+# Don't need multi-agent for simple tasks
+simple_task = "Translate this text to French"
+result = await translation_agent.run(simple_task)
+# Don't need multi-agent for linear, single-domain tasks
+linear_task = "Summarize this 10-page document"
+result = await summary_agent.run(linear_task)
+When Multi-Agent Adds Value:
+# Complex, multi-domain research task
+complex_task = """Analyze market trends for electric vehicles
+in European markets, considering regulatory changes,
+consumer sentiment, and competitive landscape"""
+# Benefits from specialized agents:
+# - Research agent: Gather data from multiple sources
+# - Analysis agent: Process quantitative market data
+# - Regulatory agent: Track policy changes
+# - Synthesis agent: Combine insights into coherent report
+result = await orchestrator.run(
+    task=complex_task,
+
+@@PAGE 391@@
+    agents=[research_agent, analysis_agent,
+            regulatory_agent, synthesis_agent]
+)
+The Optimization Principle: Start with the simplest architecture that could
+work. Add complexity only when evaluation demonstrates clear benefits. A
+single well-designed agent often outperforms a poorly designed multi-agent
+system.
+11.3.12 
+Summary: 
+Failure 
+Modes 
+as 
+Optimization
+Opportunities
+These ten failure modes aren’t just problems to avoid—they’re optimization
+opportunities. Each represents a dimension where measurement and
+systematic improvement can enhance your system:
+ 
+1. Detailed instructions -> Iteratively expand based on failure analysis
+2. Model capability -> Strategic model selection and optimization (next
+section)
+3. Instruction-model matching -> Model-specific prompt engineering
+4. Tool quality -> Curated, reliable tool catalogs
+5. Termination conditions -> Data-driven threshold calibration
+6. Pattern selection -> Empirical pattern comparison
+7. Memory and learning -> Strategic memory implementation
+8. Metacognition -> Reflection loop design
+9. Evaluation infrastructure -> Foundation for all optimization
+10. Human delegation -> Risk-based approval strategies
+The evaluation framework from Chapter 10 enables systematic improvement
+across all these dimensions.
+11.4 Summary
+Optimizing multi-agent systems requires iterative discipline: measure
+performance through evaluation, identify failure points, adjust parameters,
+
+@@PAGE 392@@
+and validate improvements. The key is knowing where to focus optimization
+efforts for maximum impact.
+ 
+Two-Level Optimization Framework: Multi-agent systems have
+agent-system parameters (instructions, tools, memory, model selection,
+orchestration patterns, termination conditions, human delegation) and
+model-level parameters (weights, architecture, training data). Agent-
+system optimization delivers the most leverage with least effort. Model-
+level optimization (finetuning, RL training) requires ML expertise and
+substantial resources—pursue only when agent-system optimization
+reaches diminishing returns or specific conditions warrant it (cost
+reduction, privacy requirements).
+Optimization 
+Priority: 
+Start 
+with 
+agent-system 
+parameters.
+Instructions and tools have the most direct impact on behavior. Model
+selection matters (frontier models have better instruction-following),
+but reasoning models can degrade performance in multi-agent
+coordination. Orchestration pattern selection is critical—our Chapter 10
+evaluation showed Direct-Model (9.7/10) outperformed Multi-Agent-
+AI (9.3/10) for simple tasks, with 43x lower token costs. Add
+complexity only when evaluation demonstrates clear benefits.
+Ten Production Failure Modes: Multi-agent systems fail in
+predictable ways. Each failure mode represents an optimization
+opportunity: insufficient instructions (expand iteratively based on eval
+failures), inadequate model capability (strategic selection), instruction-
+model mismatch (maintain model-specific prompts), poor tool quality
+(curate battle-tested catalogs), unclear termination (align conditions
+with agent capabilities), wrong orchestration pattern (empirical
+comparison via evaluation), missing memory (strategic implementation
+where beneficial), lack of metacognition (plan-based reflection loops),
+no evaluation infrastructure (foundational requirement), and unclear
+human delegation (risk-based approval policies).
+The Evaluation Foundation: You cannot optimize what you cannot
+measure. The evaluation infrastructure from Chapter 10 enables all
+optimization 
+activities—it 
+identifies 
+failure 
+modes, 
+validates
+
+@@PAGE 393@@
+improvements, and enables systematic iteration. Without evaluation,
+optimization becomes guesswork.
+Optimization is a continuous discipline, not a one-time activity. Start with
+the simplest architecture that could work, measure performance rigorously,
+and add complexity incrementally when evaluation demonstrates clear
+benefits. A well-designed single agent often outperforms a poorly designed
+multi-agent system.
+OceanofPDF.com

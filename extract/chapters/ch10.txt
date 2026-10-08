@@ -1,0 +1,1044 @@
+
+@@PAGE 339@@
+10 Evaluating Multi-Agent Systems
+This chapter covers:
+ 
+Understanding what we’re really evaluating: multiagent trajectories -
+sequences of reasoning and actions
+Building evaluation metrics and judges that work across models,
+agents, and multiagent systems
+Implementing a practical evaluation library that integrates with our
+picoagents framework
+Planning effective evaluation strategies for complex multiagent tasks
+10.1 Introduction
+When you design a multiagent system to address a task e.g., “build a mobile
+app for stock trading,”, your agent explores a series of actions - it does
+things and might declare the task as complete. But how do you truly verify
+or evaluate its performance? It’s tempting to focus only on the final
+deliverable - does the app work? But this misses the rich problem-solving
+process that unfolds: the planning discussions between steps or individual
+agents, the iterative code generation, the debugging turns, and the
+coordination decisions that led to success or failure.
+In this chapter, we’ll build an evaluation framework that captures this
+complete picture. Rather than treating evaluation as an afterthought, we’ll
+make it a core component of our picoagents library - enabling systematic
+assessment of everything from simple model calls to complex autonomous
+orchestrations.
+The key insight is that whether you’re evaluating a single model, an agent,
+or a full multiagent workflow, you’re fundamentally evaluating the same
+thing: a trajectory - a sequence of reasoning messages and actions that
+unfolds over time. This unified view enables us to apply consistent
+evaluation approaches across different levels of complexity.
+
+@@PAGE 340@@
+10.2 Evaluation-Driven Development
+In my experience working with teams building agents or multiagent systems,
+a common mistake I see is that evaluation is considered much too late in the
+development process. The excitement or hype around using Agents often
+seems to distract from exploring a careful overall development strategy - and
+to help with this I often recommend what I call evaluation-driven
+development .
+Evaluation-driven development means defining how you’ll measure
+success before building your system. Like test-driven development (TDD)—
+where you write tests before code—you establish success criteria, metrics,
+and evaluation infrastructure before implementing agent behaviors.
+Just as TDD tests clarify requirements and guide implementation, evaluation
+criteria force you to articulate what “good” means for your domain. If you’ll
+measure reasoning efficiency, you’ll build token tracking from day one. If
+you’ll compare tool call sequences, you’ll design observability into your
+framework. Evaluation constraints become design requirements.
+The Power of Easy Evaluation
+As Eugene Yan observes: “I’ve found that once you’ve set up the evals + experiment harness
+and make it easy to tweak config and prompts with 1-click run + eval, teams enjoy running
+experiments and hill climbing those numbers, and progress comes quickly.”
+This highlights why building evaluation infrastructure early pays dividends - when
+experimentation is frictionless, teams naturally iterate faster and discover better solutions.
+10.2.1 An Evaluation Planning Framework
+In the rush and excitement of building AI agents or multi-agent systems, I
+have unfortunately seen many teams jump straight into writing agent code or
+trying out frameworks. This is often a mistake. In reality, writing the agent
+should come much later - first you need to be very clear on how you will
+evaluate success.
+
+@@PAGE 341@@
+To help guide this process, here is a simple 5-step evaluation planning
+framework. Before writing agent code, work through these five planning
+questions. The rest of this chapter provides the tools and techniques to
+answer each one.
+Table 10.1 shows the Evaluation-Driven Development Framework with five
+key planning questions to answer before building your multiagent system.
+Table 10.1: Evaluation-Driven Development Framework - Answer these questions before building your multiagent system.
+Step Planning
+Question
+Key Considerations
+Covered In
+1
+Define
+Success
+Criteria
+What does success look like?
+Which dimensions matter most
+(accuracy, 
+speed, 
+user
+experience)? How will you
+measure improvement?
+Reference-based 
+vs
+reference-free 
+metrics
+(Section 10.5)
+2
+Create
+Your Task
+Suite
+What are representative tasks?
+Edge cases? How many test
+cases provide reliable signal?
+Designing 
+evaluation
+suites (Section  10.4),
+Creating 
+tasks
+(Section 10.6.1)
+3
+Choose
+Your
+Metrics
+Deterministic metrics vs LLM
+judges? Process vs outcome
+measures? Single vs composite
+evaluation?
+Metrics 
+and 
+judges
+(Section 
+10.5),
+Composite 
+evaluation
+(Section 10.5.3)
+4
+Establish
+Baselines
+What 
+are 
+you 
+comparing
+against? How is the task done
+today? Direct model calls?
+Single 
+agents? 
+Previous
+versions?
+Evaluation 
+targets
+(Section 
+10.6.2),
+Running 
+evaluations
+(Section 10.6)
+5
+Plan
+Iteration
+Workflow
+When do you run evals? How
+do you identify regressions?
+What’s 
+your 
+experiment
+tracking strategy?
+Understanding 
+results
+(Section 10.6.5)
+This framework provides a roadmap for the rest of the chapter. We’ll start by
+understanding what we’re evaluating (multiagent trajectories), then explore
+how to design domain-specific evaluation suites, and finally build the
+
+@@PAGE 342@@
+practical evaluation infrastructure needed to implement this evaluation-first
+approach. By the end, you’ll have a complete toolkit for systematically
+measuring and improving your multiagent systems.
+10.3 What We’re Evaluating: Multiagent
+Trajectories
+Every time you run an agent or multiagent system, you generate a trajectory
+- a complete record of the reasoning and actions taken to address a task. This
+trajectory includes:
+ 
+Messages: The conversational flow between user, agents, and tools
+Actions: Tool calls, function executions, and external interactions
+Outcomes: Success/failure status, errors encountered, and final results
+Metadata: Timing, token usage, and execution context
+Consider this simple example:
+Task: "What's the weather in Paris?"
+Trajectory:
+User: What's the weather in Paris?
+Agent: I need to get current weather data. Let me call the weather API.
+Tool Call: get_weather(location="Paris") 
+Tool Result: {"temp": 22, "conditions": "sunny"}
+Agent: The weather in Paris is currently sunny with a temperature of 22°C.
+This trajectory tells the complete story - not just the final answer, but how
+the agent reasoned, what tools it used, and whether the approach was
+effective.
+Now consider a more complex multiagent scenario:
+Task: "Create a simple calculator web app"
+
+@@PAGE 343@@
+Trajectory (simplified):
+User: Create a simple calculator web app
+Planner Agent: I'll break this into frontend and backend tasks...
+Frontend Agent: I'll create an HTML interface with basic operations...
+Backend Agent: I'll implement the calculation logic...
+[50+ messages of iterative development, testing, debugging]
+System: Task completed successfully. Calculator app deployed.
+The trajectory captures the coordination between agents, the iterative
+refinement process, and the emergent solution - information that’s lost if we
+only evaluate the final deliverable.
+10.3.1 Representing Trajectories in Code
+In our picoagents library, we represent trajectories with a simple data
+structure:
+from picoagents.types import (
+    RunTrajectory,
+    Task
+)
+class RunTrajectory:
+    # What we're trying to solve
+    task: Task
+    # Complete conversation history
+    messages: Sequence[Message]
+    # Did we complete the task?
+    success: bool
+    # Error details if failed
+    error: Optional[str]
+    # Resource consumption metrics
+    usage: Optional[Usage]
+    # Additional execution context
+    metadata: Dict[str, Any]
+
+@@PAGE 344@@
+This structure works whether you’re evaluating a single model call or a
+complex multiagent workflow. The messages capture the reasoning process,
+while metadata provides execution context.
+10.3.2 Observability as Foundation
+Observability Enables Evaluation
+Building evaluation-ready systems requires thinking about observability from day one. When
+your agents emit structured events during execution (using standards like OpenTelemetry), you
+can reconstruct complete trajectories for evaluation without requiring evaluation specific runs.
+This means every production run becomes a potential evaluation data point.
+Our picoagents library takes an observability-first approach by design:
+ 
+Structured Message Logging: Every interaction is captured with
+timestamps, metadata, and context
+Usage Tracking: Token consumption, API calls, and execution times
+are automatically recorded
+Error Propagation: Failures are logged with full context rather than
+failing silently
+Execution Traces: Complete trajectories can be replayed and analyzed
+This upfront investment in observability pays dividends during evaluation.
+When a multiagent system fails, you can trace exactly where and why - was
+it a reasoning error, a tool call failure, or an agent coordination issue? More
+importantly, you can retroactively evaluate any past execution by
+reconstructing its trajectory from the logged events.
+10.3.3 The Answer Extraction Challenge
+A subtle but critical challenge emerges when evaluating real agent
+conversations: where is the actual answer?
+Consider an agent that uses tools:
+
+@@PAGE 345@@
+Agent: "Let me calculate that: 2+2"
+Tool: "Calculator result: 4"
+Agent: "The calculation is complete."
+Which message contains the answer? A naive approach taking the last
+message gets “The calculation is complete” - missing the actual result
+entirely.
+Our evaluation system addresses this with answer extraction strategies:
+from picoagents.eval import ExactMatchJudge
+# Use last non-empty message (default)
+judge = ExactMatchJudge(
+    answer_strategy="last_non_empty"
+)
+# Use only last assistant message
+judge = ExactMatchJudge(
+    answer_strategy="last_assistant"
+)
+# Concatenate all assistant messages
+judge = ExactMatchJudge(
+    answer_strategy="all_assistant"
+)
+This seemingly small detail prevents evaluation failures that would
+otherwise make your metrics unreliable in production.
+What Judges Need from Trajectories
+Different evaluation scenarios require different information from trajectories. Reference-based
+judges need access to both the expected output (from the task definition) and the actual output
+(extracted from the agent’s messages using answer strategies). LLM judges evaluating
+response quality need the task input to understand what was requested, the agent’s response to
+assess quality, and sometimes conversation history when evaluating multi-turn interactions.
+Tool-using agents present additional complexity—you might need to examine not just the final
+
+@@PAGE 346@@
+response but also which tools were called and with what arguments. Our answer extraction
+strategies handle common cases, but for specialized evaluation needs you can create custom
+judges that directly inspect the message sequence in trajectory.messages to extract exactly the
+information your evaluation criteria require.
+10.4 Designing Evaluation Suites
+Building effective evaluation for multiagent systems is fundamentally a
+creative design problem. Unlike traditional machine learning systems where
+established metrics like BLEU, ROUGE, or NDCG provide standardized
+measurement, agentic systems produce outcomes that resist simple
+quantification. The trajectory of an agent solving a software engineering task
+looks nothing like one generating data visualizations or conducting market
+research - yet all three require rigorous evaluation.
+This presents both a challenge and an opportunity. The challenge is that you
+can’t simply reach for off-the-shelf metrics. The opportunity is that
+thoughtful evaluation design becomes a competitive advantage - teams that
+develop domain-specific evaluation suites aligned with expert judgment will
+build better systems faster.
+10.4.1 Why Traditional ML Metrics Fall Short
+Traditional NLP metrics were designed for structured prediction tasks with
+well-defined outputs. BLEU measures n-gram overlap between generated
+and reference translations. ROUGE scores summarization quality through
+word overlap. NDCG ranks information retrieval results. These metrics
+excel when the output format is predictable and structured (text sequences,
+ranked lists), multiple reference outputs can be collected for comparison, and
+success can be approximated through surface-level similarity.
+Agentic systems violate all three assumptions. Consider what an agent
+produces during a typical execution: tool call sequences with varied
+orderings that achieve equivalent outcomes, generated artifacts spanning
+text, code, images, audio, and structured data, interactive dialogues where
+conversational quality matters as much as factual accuracy, multi-step
+
+@@PAGE 347@@
+reasoning chains where process quality affects reliability, and external state
+changes like files created, APIs called, or databases modified. An agent
+writing software might produce beautiful, well-tested code through 50
+reasoning steps, or produce identical functionality through 200 steps with
+extensive backtracking. Traditional metrics miss this entirely - they can’t
+distinguish elegant solutions from brute-force success, nor can they evaluate
+the quality of intermediate artifacts like test coverage or code
+documentation.
+Perhaps more fundamentally, agentic trajectories are non-deterministic and
+heterogeneous. A single task execution might include natural language
+reasoning about the problem, JSON tool call specifications, Python code
+generation, terminal command outputs, rendered visualizations, error
+messages and debugging steps, and multi-turn clarification dialogues. This
+heterogeneity resists reduction to scalar metrics. You can’t compute BLEU
+score on a mixture of code, images, and conversation.
+This is where the power of large language models as evaluators becomes
+apparent. Modern multimodal LLMs can process exactly the data formats
+agents produce - text, code, images, structured data, tool calls - and reason
+about their quality using the same capabilities that enable agent reasoning in
+the first place. If an LLM can write code, it can evaluate code quality. If it
+can generate visualizations, it can assess whether a chart effectively
+communicates insights.
+Traditional software systems execute deterministic behaviors—download a
+file, call an API, return a result. The power of agents is that they enable us to
+build systems that tackle tasks requiring reasoning and intelligence: how to
+architect an application, debug emergent issues, synthesize insights from
+data. These are tasks humans approach with creativity and domain expertise.
+As system developers, our evaluation methods must mirror this same
+intelligence and creativity. We can’t evaluate intelligent behavior with
+simple rule-based metrics any more than we can build intelligent systems
+with simple rule-based logic.
+10.4.2 Translating Domain Expertise into Evaluation Methods
+
+@@PAGE 348@@
+The key to designing effective evaluation suites is translating domain
+expertise into measurable criteria. Ask yourself: If an expert human were
+evaluating this outcome, what would they check?
+For a software development agent, an expert engineer would examine:
+ 
+Functional correctness: Does the code solve the stated problem?
+Test coverage: Are edge cases handled? Do tests actually verify
+behavior?
+Code quality: Is the implementation maintainable, readable, efficient?
+Type safety: Do static analysis tools (mypy, pyright) report issues?
+Documentation: Are functions documented? Is there a README?
+Error handling: Does the code fail gracefully with clear messages?
+Each of these expert judgments can be translated into evaluation methods:
+# Functional correctness: Run test suite
+def evaluate_functional_correctness(code_trajectory):
+    test_results = execute_pytest(
+        code_trajectory.generated_code
+    )
+    return test_results.pass_rate
+# Test coverage: Analyze coverage report
+def evaluate_test_coverage(code_trajectory):
+    coverage = run_coverage_analysis(
+        code_trajectory.generated_code
+    )
+    return coverage.line_coverage_percent
+# Type safety: Run static analysis
+def evaluate_type_safety(code_trajectory):
+    mypy_results = run_mypy(
+        code_trajectory.generated_code
+    )
+    error_count = mypy_results.error_count
+    total_lines = max(mypy_results.lines, 1)
+
+@@PAGE 349@@
+    error_rate = error_count / total_lines
+    return 1.0 - error_rate
+# Code quality: LLM evaluation
+def evaluate_code_quality(code_trajectory):
+    return llm_judge.evaluate(
+        code_trajectory.generated_code,
+        criteria=[
+            "Is the code readable with clear variable names?",
+            "Are functions appropriately sized and focused?",
+            "Is the implementation efficient?",
+            "Does the code follow Python best practices?"
+        ]
+    )
+Notice the mixture of approaches. Some expert judgments (test coverage,
+type safety) map cleanly to deterministic metrics - these should be preferred
+when available because they’re fast, reproducible, and provide precise
+signals. Other judgments (code readability, architectural soundness) require
+nuanced reasoning that benefits from LLM evaluation.
+10.4.3 Domain-Specific Evaluation Examples
+Let’s contrast this with an agent that generates data visualizations. An expert
+data scientist evaluating a chart would check:
+ 
+Data accuracy: Does the visualization correctly represent the
+underlying data?
+Visual clarity: Are axes labeled? Is there a descriptive title?
+Chart choice: Is the visualization type appropriate for the data?
+Legibility: Are fonts readable? Are colors distinguishable?
+Statistical honesty: Are scales appropriate? Is overplotting avoided?
+Context: Are units specified? Are dates/time ranges clear?
+The evaluation approach looks quite different:
+
+@@PAGE 350@@
+# Data accuracy: Programmatic verification
+def evaluate_data_accuracy(viz_trajectory):
+    # Load ground truth data
+    original_data = load_data(viz_trajectory.task.data_path)
+    # Extract data points from visualization metadata
+    # (agent may store plot data in trajectory metadata)
+    viz_data = viz_trajectory.metadata.get('plot_data', None)
+    if viz_data is None:
+        return 0.0
+    return compute_correlation(original_data, viz_data)
+# Visual elements: Multimodal LLM evaluation
+def evaluate_visual_quality(viz_trajectory):
+    # Extract generated image from trajectory messages
+    # (agents may produce MultiModalMessage with images)
+    messages = viz_trajectory.messages
+    image_messages = [
+        msg for msg in messages
+        if hasattr(msg, 'is_image') and msg.is_image()
+    ]
+    if not image_messages:
+        return 0.0
+    # Evaluate the generated visualization
+    return multimodal_llm_judge.evaluate(
+        messages=image_messages,
+        criteria=[
+            "Does the chart include a descriptive title?",
+            "Are all axes clearly labeled with units?",
+            "Is the text legible at normal viewing size?",
+            "Are colors used effectively and accessible?",
+            "Is the date range or temporal context clear?"
+        ]
+    )
+# Statistical properties: Programmatic checks
+
+@@PAGE 351@@
+def evaluate_statistical_honesty(viz_trajectory):
+    checks = {
+        "appropriate_axis_scaling":
+            verify_axis_ranges(viz_trajectory),
+        "no_severe_overplotting":
+            check_point_density(viz_trajectory),
+        "consistent_units":
+            verify_unit_consistency(viz_trajectory)
+    }
+    return sum(checks.values()) / len(checks)
+Here we see multimodal evaluation in action. The RunTrajectory contains a
+messages field that can include MultiModalMessage instances with images, audio,
+or other media. Vision-capable LLM judges can process these messages
+directly, assessing whether a generated chart has legible fonts or appropriate
+titles—tasks that would be extremely difficult with traditional computer
+vision pipelines. This capability extends naturally from how agents already
+work: if an agent can generate and reason about images, the same
+multimodal models can evaluate those images.
+Multimodal Evaluation in Practice
+When using vision-capable models (GPT-4o, Claude 3.5 Sonnet) as judges, you can pass
+MultiModalMessage instances directly from the trajectory. The judge’s LLM client handles the
+multimodal content just as it would during agent execution. This unified approach means
+evaluation uses the same message types and model capabilities as your agent system.
+10.4.4 When to Use Numeric Metrics vs LLM Judges
+As these examples illustrate, effective evaluation suites strategically
+combine deterministic metrics with LLM-based judgment. The decision
+framework:
+Prefer deterministic metrics when:
+ 
+Ground truth is available and comparison is well-defined
+
+@@PAGE 352@@
+The evaluation criterion maps to a measurable property (test coverage,
+error rates, response time)
+Consistency and reproducibility are critical
+Cost and latency matter (evaluating thousands of examples)
+You need to track fine-grained changes over time
+Prefer LLM judges when:
+ 
+The criterion requires nuanced reasoning about quality
+Multiple valid solutions exist and surface similarity is misleading
+Human judgment involves subjective assessment
+The output format is unstructured or multimodal
+Domain expertise is needed to evaluate correctness
+Use both when:
+ 
+Different aspects of quality require different evaluation approaches
+You want to validate LLM judgments against objective baselines
+Cost-sensitive scaling requires filtering with cheap metrics before
+expensive evaluation
+For example, you might filter code generation results with fast unit tests
+(deterministic) before running expensive LLM evaluation of code quality
+and architectural decisions. Or you might use deterministic checks to verify
+a visualization has required elements (title, labels) before using multimodal
+LLM evaluation to assess the quality of those elements.
+Evaluation suite design is itself an iterative process. Start with a hypothesis
+about what matters for your domain, implement evaluation methods, and
+then validate that your metrics actually correlate with downstream success.
+A systematic approach: first, consult domain experts to understand how they
+evaluate quality; second, translate expert criteria into measurable
+evaluations; third, test whether your metrics correlate with expert judgments;
+fourth, adjust weights, add dimensions, and fix misaligned incentives; and
+finally, monitor whether optimizing for your metrics improves real
+performance. This scientific iteration prevents common pitfalls like
+optimizing for metrics that don’t actually measure what matters, or creating
+
+@@PAGE 353@@
+evaluation criteria that are gameable in ways that don’t reflect genuine
+improvement.
+Designing domain-specific evaluation suites requires creativity precisely
+because it resists formulaic approaches. Each application domain brings
+unique success criteria, failure modes, and quality dimensions. The teams
+that invest in thoughtful evaluation design - bringing together domain
+expertise, technical measurement, and validation against real outcomes - will
+build more reliable systems and iterate faster toward genuinely useful agent
+capabilities.
+The crucial insight is that evaluation is not just a technical problem to solve
+with better metrics - it’s a design problem that requires understanding what
+quality means in your specific domain and creatively translating that
+understanding into measurement. With this foundation in mind, the next
+sections provide the technical infrastructure to implement these evaluation
+approaches in our picoagents library, building judges, runners, and
+composite evaluation systems that can assess everything from simple model
+calls to complex multiagent orchestrations.
+10.5 How We Evaluate: Metrics and
+Judges
+Once we have a trajectory, how do we score it? This requires two
+components: metrics (what dimensions to measure) and judges (how to
+score each dimension).
+10.5.1 Reference-Free vs Reference-Based Metrics
+Reference-based metrics compare outputs to known correct answers:
+For tasks with deterministic answers, you can evaluate without expensive
+LLM calls:
+from picoagents.eval import ExactMatchJudge
+from picoagents.types import Task
+
+@@PAGE 354@@
+# Create task with expected output
+task = Task(
+    name="arithmetic",
+    input="2+2",
+    expected_output="4"
+)
+# Exact match judge for deterministic answers
+exact_judge = ExactMatchJudge()
+But what if the agent says “The answer is 4” instead of just “4”? Evaluation
+systems need strategies for handling conversational responses:
+from picoagents.eval import (
+    ContainsJudge,
+    FuzzyMatchJudge
+)
+# Finds "4" within longer responses
+contains_judge = ContainsJudge()
+# Handles "Four" vs "4" variations
+fuzzy_judge = FuzzyMatchJudge()
+Reference-free metrics assess quality without ground truth:
+ 
+Helpfulness: How useful is the response to the user?
+Communication clarity: How well do agents coordinate?
+Resource efficiency: How many tokens or API calls were used?
+Many multiagent tasks require reference-free evaluation because the
+“correct” solution can vary widely (there are many ways to build a calculator
+app).
+Agent-specific metrics evaluate the process agents use to reach solutions:
+For tool-using agents, you often care not just about the final answer but
+about whether the agent selected the right tools and in what order. Did
+
+@@PAGE 355@@
+the agent call search before summarize? Did it use calculator with the correct
+arguments? These process-oriented metrics are particularly important for
+debugging agent behavior—an agent might get lucky and produce the right
+answer through the wrong reasoning path. You can implement tool
+evaluation by examining ToolMessage instances in the trajectory to verify tool
+selection, argument correctness, and execution sequence against expected
+patterns. While our current judges focus on final outputs, production systems
+often extend this pattern with specialized judges for tool call accuracy and
+reasoning trajectory validation.
+10.5.2 LLM-as-a-Judge: A Practical Approach
+For reference-free evaluation, we can use strong language models as judges.
+These LLM judges can assess nuanced qualities that traditional metrics
+miss.
+Here’s how we create and configure an LLM judge:
+from picoagents.eval import LLMEvalJudge
+from picoagents.llm import AzureOpenAIChatCompletionClient
+# Create LLM judge with evaluation criteria
+judge_client = AzureOpenAIChatCompletionClient(
+    model="gpt-4.1-mini"
+)
+judge = LLMEvalJudge(
+    client=judge_client,
+    default_criteria=[
+        "accuracy",
+        "helpfulness",
+        "efficiency"
+    ]
+)
+The judge scores trajectories by building an evaluation prompt that includes
+the task, expected output (if available), and the complete agent conversation.
+
+@@PAGE 356@@
+It then uses the LLM to provide scores (0-10) and reasoning for each
+criterion.
+# Score a trajectory
+score = await judge.score(
+    trajectory,
+    criteria=["accuracy", "helpfulness"]
+)
+# Access results
+print(f"Overall: {score.overall}/10")
+print(f"Accuracy: {score.dimensions['accuracy']}/10")
+print(f"Reasoning: {score.reasoning['accuracy']}")
+This approach leverages the reasoning capabilities of advanced models to
+provide nuanced evaluation across multiple dimensions.
+10.5.3 Scoring Strategies
+When applying metrics to trajectories, we have several options:
+Single Answer Grading: Score the complete trajectory holistically
+ 
+Good for: Overall task assessment
+Challenge: May miss important process details
+Pairwise Comparison: Rather than scoring each trajectory independently,
+pairwise evaluation directly compares two outputs and identifies which is
+better. This approach is particularly valuable during iterative development
+—each agent version can be systematically compared against the previous
+baseline to ensure you’re making progress. While pointwise evaluation asks
+“how good is this response?” (requiring absolute judgment), pairwise
+evaluation asks the simpler question “which response is better?” This
+relative judgment is often more reliable, especially for subjective qualities
+where absolute scores feel arbitrary. The tradeoff is that you need multiple
+evaluation runs to establish relative rankings.
+
+@@PAGE 357@@
+# Compare two agent configurations
+scores_v1 = await runner.evaluate(agent_v1, tasks)
+scores_v2 = await runner.evaluate(agent_v2, tasks)
+avg_v1 = sum(s.overall for s in scores_v1) / len(scores_v1)
+avg_v2 = sum(s.overall for s in scores_v2) / len(scores_v2)
+improvement = ((avg_v2 - avg_v1) / avg_v1) * 100
+print(f"Version 2: {improvement:+.1f}% vs baseline")
+Dimensional Scoring: Score multiple aspects independently
+ 
+Good for: Detailed feedback, identifying specific weaknesses
+Challenge: More complex to implement and interpret
+10.6 Building a Practical Evaluation
+Harness
+Let’s build a comprehensive evaluation to answer a fundamental question:
+when do multi-agent systems justify their overhead? We’ll compare four
+approaches across diverse task types, starting with a baseline (direct model
+calls) and progressively adding capabilities: tools, round-robin orchestration
+(Section 7.3), and AI-driven orchestration (Section 7.4). All configurations
+use GPT-4.1-mini to ensure fair comparison.
+Table 10.2 shows the four approaches we’ll compare.
+Table 10.2: Four approaches compared in the evaluation study using GPT-4.1-mini.
+Approach
+Description
+Direct-Model
+Baseline: direct GPT-4.1-mini calls with no agent
+wrapper, tools, or orchestration
+Single-Agent-
+Tools
+Single agent with tools (Think, Calculator, DateTime,
+GoogleSearch, TaskStatus)
+Multi-Agent-
+RoundRobin
+Three-agent team (planner, solver, reviewer) with fixed
+rotation orchestration (Section  7.3). Solver has same
+
+@@PAGE 358@@
+tools as Single-Agent-Tools
+Multi-Agent-AI
+Same three-agent team with AI-driven orchestration
+(Section  7.4) using dynamic agent selection based on
+task requirements
+Table 10.3 shows the task categories designed to test different capabilities.
+Table 10.3: Task suites testing different agent capabilities (10 tasks total).
+Task Suite
+Description
+Tasks
+Simple-
+Reasoning
+Basic reasoning without tools: math word problems,
+logic puzzles, reading comprehension
+3
+Tool-Heavy
+Research requiring real-time data: web search for
+podcast interviews, tech events, academic papers
+3
+Planning
+Multi-constraint optimization: trip planning with
+budgets, resource allocation for weighted outcomes
+2
+Verification
+Critique-focused 
+tasks: 
+fact-checking 
+myths,
+analyzing arguments for logical fallacies
+2
+Each suite targets specific capabilities. Simple-Reasoning includes average
+speed calculations, profession assignment puzzles, and date arithmetic—
+tasks solvable through reasoning alone. Tool-Heavy tasks require
+GoogleSearch for current information: verifying podcast interviews (Andrej
+Karpathy on Eureka Labs), researching tech conference announcements
+(OpenAI DevDay), and finding recent arXiv papers on multi-agent
+reinforcement learning. Planning tasks involve multi-step coordination:
+creating a 3-day San Francisco itinerary under budget constraints with public
+transportation, or optimizing study time allocation across weighted exams.
+Verification tasks test whether critique adds value: fact-checking claims
+about brain energy usage and coffee dehydration, or identifying fallacies in
+social media arguments.
+Our evaluation harness (comprehensive-evaluation.py) supports two modes: a mini
+version with 1 task per suite (approximately 2 minutes runtime) for rapid
+iteration, and a full version with 2-3 tasks per suite (approximately 8
+minutes) for comprehensive assessment. This mini/full pattern proved
+essential for debugging both agent configurations and judge behavior.
+
+@@PAGE 359@@
+Working Code: Comprehensive Evaluation
+Complete implementation of the evaluation described in this section:
+ 
+Main Script: evaluation/comprehensive-evaluation.py - Full evaluation suite with quick/full modes, task
+suites, and result visualization
+Results & Trajectories: evaluation/comprehensive_results/ - Complete results CSV and individual task
+trajectories with judge reasoning
+Documentation: evaluation/README.md - Setup instructions, mode explanations, and interpretation
+guide
+10.6.1 Designing the Task Suite
+The choice of tasks determines what insights your evaluation will reveal.
+Our four suites test orthogonal capabilities: Simple-Reasoning establishes a
+baseline where multi-agent configurations may not provide value, Tool-
+Heavy validates whether agents can leverage external capabilities/tools,
+Planning tests multi-step decomposition, and Verification assesses whether
+critique improves outputs.
+Consider the Tool-Heavy suite. These tasks require real-time information
+that no model training could provide—a design choice that forces the system
+to use tools successfully or fail entirely. Here’s how we create one such task:
+def create_tool_heavy_tasks() -> List[Task]:
+    return [
+        Task(
+            name="Podcast Research",
+            input="""Did Andrej Karpathy have a podcast interview with
+            Dwarkesh Patel where he discussed Eureka Labs? If so, what
+            did he say was the primary goal? Provide specific quotes.""",
+            expected_output="""Yes, Andrej Karpathy discussed Eureka Labs.
+            The primary goal is to personalize education using AI teaching
+            assistants that allow students to ask questions and receive
+            customized, interactive experiences..."""
+        ),
+
+@@PAGE 360@@
+        # Additional Tool-Heavy tasks...
+    ]
+The expected output isn’t used for exact matching but guides the LLM judge
+on what constitutes a complete answer. This task will immediately
+differentiate configurations: Direct-Model will hallucinate or admit
+ignorance, while tool-enabled configurations can find these facts through
+web search.
+10.6.2 Creating Evaluation Targets
+Each configuration needs an evaluation target—an adapter that runs the
+system uniformly regardless of its internal structure. The simplest is Direct-
+Model, which bypasses the agent framework entirely:
+# Baseline: direct model calls
+model_target = ModelEvalTarget(
+    client=AzureOpenAIChatCompletionClient(model="gpt-4.1-mini"),
+    system_message="You are a helpful, accurate assistant."
+)
+Single-Agent-Tools wraps an agent with tool access. The key design
+decision is tool selection—we provide Think (for explicit reasoning),
+Calculator (for arithmetic), DateTime (for temporal queries), GoogleSearch
+(for current information), and TaskStatus (for workflow management):
+# Single agent with tools
+agent_with_tools = Agent(
+    name="assistant",
+    instructions="""You are a knowledgeable assistant with access to tools.
+    Use tools when they would improve accuracy. Think step-by-step for
+    complex problems. For research tasks, use google_search to find
+    current information.""",
+    model_client=client,
+    tools=[ThinkTool(), CalculatorTool(), DateTimeTool(),
+           GoogleSearchTool(), TaskStatusTool()]
+)
+agent_target = AgentEvalTarget(agent_with_tools)
+
+@@PAGE 361@@
+Multi-agent configurations introduce a three-agent team: a planner for
+decomposition, a solver with tools for execution, and a reviewer for quality
+assurance. The solver receives the same tools as Single-Agent-Tools,
+ensuring that any performance differences stem from orchestration patterns
+rather than capability gaps. RoundRobinOrchestrator cycles through agents
+in fixed order, while AIOrchestrator lets the model dynamically select the
+next speaker based on task requirements and state as the task progresses.
+10.6.3 Configuring the Judge
+Given that we are taking an LLM-as-judge approach, evaluation quality
+depends entirely on judge calibration. We use a composite judge combining
+multiple dimensions—accuracy, completeness, helpfulness, and clarity—
+with an LLM providing nuanced scoring that exact-match approaches cannot
+capture.
+Building effective evaluations requires iteration and creativity. While
+developing this evaluation suite, I encountered initial results that
+contradicted my expectations: multi-agent systems scored 6.82/10 while
+direct models achieved 7.94/10. Inspecting both the judge rationale and
+trajectory traces revealed several critical issues that required fixing before
+the evaluation could produce meaningful results.
+Issue 1: The Verbosity Penalty
+The first problem appeared in judge reasoning:
+{
+  "overall": 6.0,
+  "reasoning": {
+    "clarity": "This is correct but verbose for a simple task"
+  }
+}
+The judge was penalizing multi-agent transparency as verbosity. When a
+planner, solver, and reviewer collaborate, the trajectory naturally contains
+their complete reasoning process. Without proper guidance, the LLM judge
+interpreted this collaborative visibility as unnecessary length rather than
+
+@@PAGE 362@@
+valuable transparency. The solution required custom instructions that
+explicitly correct this bias:
+judge = LLMEvalJudge(
+    client=judge_client,
+    custom_instructions="""
+    SCORING PHILOSOPHY:
+    - If the answer is CORRECT and COMPLETE, score 8-10 regardless of length
+    - DO NOT PENALIZE: Multi-agent collaborative process visibility
+    - DO NOT PENALIZE: Showing reasoning steps or validation
+    EVALUATION CRITERIA:
+    1. Completeness: Multiple valid solutions = COMPLETE (9-10)
+    2. Helpfulness: Correct + reasoning = HELPFUL (9-10)
+    3. Clarity: Logically structured = CLEAR (9-10), not brevity
+    """,
+    default_criteria=["accuracy", "completeness", "helpfulness", "clarity"]
+)
+After adding these instructions and re-running the evaluation, multi-agent
+scores improved from 6.82/10 to 9.30/10—revealing their true performance
+once the verbosity bias was addressed with instructions.
+Issue 2: Dimension Normalization
+Another issue I observed was that when combining judges with different
+dimensions using CompositeJudge, composite scores didn’t match expectations.
+Judge A might score accuracy and helpfulness, while Judge B scores clarity.
+The weighted average wasn’t normalizing correctly—weights summed to
+1.0 globally instead of per dimension. The fix required adjusting dimension
+calculations:
+# Normalize weights per dimension, not globally
+for dim, contributions in dimension_contributions.items():
+    total_weight_for_dim = sum(weight for _, weight in contributions)
+    dimensions[dim] = sum(
+        val * (weight / total_weight_for_dim)
+
+@@PAGE 363@@
+        for val, weight in contributions
+    )
+These issues illustrate an important principle: evaluation itself requires
+debugging. Log complete trajectories with judge reasoning, inspect the data
+when results seem wrong, identify biases in both the system and the
+evaluation framework, then iterate. Without this process, the verbosity bias
+would have led to incorrect conclusions about multi-agent system
+performance.
+10.6.4 Running the Evaluation
+The EvalRunner coordinates execution across all configurations and tasks,
+collecting trajectories with complete execution traces—messages, tool calls,
+token usage, and timing:
+runner = EvalRunner(
+    judge=composite_judge, parallel_tasks=True)
+# Evaluate all configurations
+for config_name, target in all_configurations:
+    scores = await runner.evaluate(target, all_tasks)
+    # Log complete trajectories for inspection
+    save_results(config_name, scores)
+Each evaluation produces rich scoring data: overall scores, dimensional
+breakdowns, judge reasoning, and complete trajectories. This granularity
+enables debugging both the systems being evaluated and the evaluation itself
+—when scores seem wrong, inspect the trajectory and judge rationale to
+identify whether the issue lies in agent behavior or evaluation bias.
+10.6.5 Results and Analysis
+Figure 10.1 shows performance across all configurations and task categories.
+
+@@PAGE 364@@
+
+@@PAGE 365@@
+Figure 10.1: Comprehensive evaluation results across four configurations and four task suites. Top-left: overall performance bars show Multi-Agent-AI (9.3/10), Single-Agent-Tools
+(9.2/10), and Multi-Agent-RoundRobin (9.2/10) leading, with Direct-Model at 8.5/10. Top-right: token efficiency by task category (score per 1K tokens for successful tasks only)
+reveals Direct-Model’s massive advantage—Simple-Reasoning shows efficiency of 54 compared to 2-4 for agent configurations; Verification shows 32 compared to under 8; Planning
+and Tool-Heavy show similar patterns with Direct-Model at 10-32 versus under 1 for multi-agent approaches. Bottom: individual task performance across all 10 tasks grouped by
+category, revealing Direct-Model’s strength on Simple-Reasoning tasks but failure on Podcast Research (3.2/10) where agent-based configurations achieve 9.0/10.
+The results reveal clear patterns. Direct-Model scores 6.8 on Tool-Heavy
+tasks compared to Multi-Agent-AI’s 9.2. On Simple-Reasoning tasks,
+Direct-Model actually performs best at 9.7 compared to Multi-Agent-AI’s
+9.3. Token efficiency shows the cost of multi-agent coordination: Direct-
+Model uses an average of 355 tokens per task while Multi-Agent-AI uses
+15343 tokens, a 43x increase.
+The Tool-Heavy suite reveals the clearest differentiation. The Podcast
+Research task exposes a critical limitation: Direct-Model scored 3.2/10
+because it lacks web search capabilities and cannot verify current
+information. All other approaches with GoogleSearchTool scored 9.0/10,
+demonstrating how tool access transforms performance on research-heavy
+tasks.
+Interestingly, Direct-Model wins on Simple-Reasoning (9.7/10), beating all
+multi-agent approaches. This indicates that LLMs themselves can be decent
+baselines for simple reasoning tasks. This validates an important principle:
+don’t over-engineer. When a task requires only straightforward reasoning
+without tool coordination or multi-step planning, a single model call
+suffices. The multi-agent overhead (coordination messages, reasoning
+visibility, multiple LLM calls) provides no benefit and actually introduces
+slight performance degradation.
+The Planning and Verification suites show less differentiation (all configs
+score 8.6-9.6/10), suggesting these task types don’t strongly favor any
+particular architecture. The value of multi-agent orchestration depends
+heavily on task characteristics.
+10.7 Exercises
+Domain-Specific Task Suite: Design and implement a task suite for your
+specific domain (e.g., customer support, code review, data analysis). Create
+
+@@PAGE 366@@
+5-10 tasks that test different capabilities relevant to your use case. Consider
+what makes a good discriminative task—what capabilities should separate
+good from poor performance?
+Custom Judge Implementation: Implement a specialized judge for your
+domain that goes beyond generic accuracy and helpfulness. For example,
+create a CodeQualityJudge that evaluates generated code for readability,
+efficiency, and maintainability, or a CustomerSupportJudge that assesses empathy,
+resolution completeness, and policy compliance. Calibrate your judge on a
+validation set before scaling.
+Regression Testing Suite: Build a regression testing system that tracks your
+agent’s performance over time. Store evaluation results with metadata
+(model 
+version, 
+configuration, 
+timestamp), 
+visualize 
+trends, 
+and
+automatically alert when performance degrades below thresholds. This
+enables confident iteration without accidentally breaking capabilities.
+Efficiency Analysis: Extend the evaluation harness to collect detailed
+efficiency metrics beyond token counts—wall-clock time, tool call counts,
+memory usage, API costs. Build visualizations that show efficiency-
+performance trade-offs across configurations. When does a 2x speedup
+justify a 0.5-point score decrease?
+10.8 Related Research and Datasets
+Several benchmarks specifically target agent and multiagent evaluation:
+GAIA (Mialon et al. 2023): 466 questions testing reasoning, tool use, and
+multi-step problem solving. Focuses on tasks that are simple for humans but
+challenging for AI systems, achieving 92% human accuracy versus 15% for
+GPT-4 with plugins.
+SWE-bench (Jimenez et al. 2023): Real GitHub issues testing software
+engineering capabilities across 2,294 problems from 12 popular Python
+repositories. Evaluates code comprehension, bug fixing, and multi-file
+coordination with only 1.96% solved by Claude 2.
+
+@@PAGE 367@@
+GPQA (Rein et al. 2023): Graduate-level questions in biology, physics, and
+chemistry requiring specialized knowledge and complex reasoning. Features
+448 “Google-proof” questions where PhD experts reach 65% accuracy while
+skilled non-experts achieve only 34%.
+Humanity’s Last Exam (HLE) (Phan et al. 2025): A multi-modal
+benchmark with 2,500 questions across dozens of subjects at the frontier of
+human knowledge, designed as a comprehensive test of advanced AI
+capabilities across mathematics, humanities, and natural sciences.
+These benchmarks share our trajectory-focused approach - they evaluate not
+just final answers but the reasoning and tool use process that leads to
+solutions. They represent increasingly challenging testbeds where current
+LLMs demonstrate significant gaps compared to human expert performance,
+making them valuable for measuring genuine progress in multiagent
+reasoning capabilities.
+Benchmarks ≠ Your Task
+Public benchmarks tell us relative performance (Model A beats Model B on task X), not how
+models will perform on your task. They can’t capture your domain’s unique success criteria,
+the composition of multiple models across your agent stack, or your specific data characteristics
+and failure modes.
+The benchmark task ≠ your business task. This is why investing creatively in domain-
+specific evaluation design is critical - only evaluation suites aligned with your actual use case
+can reliably measure whether changes improve real performance.
+10.8.1 The Contamination Challenge
+A growing concern in AI evaluation is benchmark contamination - when
+training data inadvertently includes test questions, inflating apparent
+performance. This is particularly problematic for multiagent systems that
+may use web search or retrieval tools, as benchmark questions often
+circulate online in various forms.
+Some strategies to mitigate contamination:
+ 
+
+@@PAGE 368@@
+Use diverse evaluation approaches: Don’t rely solely on public
+benchmarks
+Create private test sets: Develop internal evaluation tasks specific to
+your use case
+Monitor for suspiciously high performance: If results seem too good
+on established benchmarks, investigate potential data leakage
+Test on fresh, unpublished problems: Generate new tasks that
+couldn’t have been seen during training
+As benchmarks become targets for optimization, their ability to measure
+genuine capability diminishes. This makes it even more important to develop
+robust, multi-faceted evaluation approaches that can adapt as the field
+evolves.
+Working Code: Evaluation Framework
+Complete evaluation system implementation:
+ 
+Agent Evaluation: evaluation/agent-evaluation.py - Practical evaluation patterns for agents and
+multiagent systems
+Core Framework: src/picoagents/eval/ - Complete evaluation library with metrics, judges, and
+trajectory analysis
+10.9 Summary
+Effective multiagent evaluation requires thinking in terms of trajectories -
+the complete sequence of reasoning and actions that unfolds during task
+execution. This unified perspective enables consistent evaluation approaches
+across models, agents, and multiagent systems.
+Key principles:
+ 
+Adopt evaluation-driven development: Define success criteria and
+evaluation infrastructure before building your system
+Design domain-specific evaluation: Translate expert judgment into
+measurable criteria using both deterministic metrics and LLM judges
+
+@@PAGE 369@@
+Evaluate iteratively: Log complete trajectories with judge rationale,
+inspect for biases, fix issues, and re-evaluate
+Account for multi-agent characteristics: LLM judges may penalize
+collaborative transparency as verbosity without proper guidance
+Match metrics to task types: Use deterministic evaluation for factual
+tasks, LLM-as-a-judge for subjective assessment
+Handle conversational complexity: Answer extraction strategies
+prevent evaluation failures in real agent interactions
+Plan systematically: Follow the 5-step framework - define success
+criteria, create task suites, choose metrics, establish baselines, and plan
+iteration workflow
+Our comprehensive evaluation revealed when multi-agent systems provide
+value versus overhead. Multi-agent configurations excel on tool-heavy
+research tasks (9.2/10 vs direct model 6.8/10) but add unnecessary overhead
+on simple reasoning tasks where direct model calls perform best (9.7/10 vs
+multi-agent 9.3/10). Token efficiency shows the cost: multi-agent systems
+use 43x more tokens than direct model calls. This demonstrates why
+evaluation is critical: it reveals which architectural complexity is justified by
+task requirements and which is over-engineering.
+The evaluation system we’ve built provides a practical foundation for
+measuring and improving multiagent systems. By combining reference-
+based efficiency with LLM-based flexibility, and by iterating on both agent
+configurations and evaluation methodology, we can develop more effective
+agent architectures while understanding when multiagent approaches
+provide genuine value.
+OceanofPDF.com

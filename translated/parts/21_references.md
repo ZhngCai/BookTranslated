@@ -1,0 +1,62 @@
+# 参考文献
+
+（以下文献标题、书名与 URL 保留英文原名，说明文字译为中文。）
+
+- Abuelsaad, Tamer, Deepak Akkil, Prasenjit Dey, Aditya Vempaty, and Ravi Kokku. 2024. "Agent-e: From Autonomous Web Navigation to Foundational Design Principles in Agentic Systems."（Agent-e：从自主网页导航到智能体式系统的基础设计原则）arXiv Preprint arXiv:2407.13032.
+- Anthropic. 2024a. "Introducing Computer Use, a New Claude 3.5 Sonnet, and Claude 3.5 Haiku."（介绍 Computer Use、新版 Claude 3.5 Sonnet 和 Claude 3.5 Haiku）Anthropic News. https://www.anthropic.com/news/3-5-models-and-computer-use.
+- ———. 2024b. "Introducing the Model Context Protocol."（介绍模型上下文协议）https://www.anthropic.com/news/model-context-protocol.
+- ———. 2024c. "Model Context Protocol Specification."（模型上下文协议规范）https://spec.modelcontextprotocol.io/.
+- Appel, Ruth, Peter McCrory, Alex Tamkin, Michael Stern, Miles McCain, and Tyler Neylo. 2025. "Anthropic Economic Index Report: Uneven Geographic and Enterprise AI Adoption."（Anthropic 经济指数报告：不均衡的地理和企业 AI 采用）Anthropic Research. https://www.anthropic.com/research/anthropic-economic-index-september-2025-report.
+- Bansal, Gagan, Jennifer Wortman Vaughan, Saleema Amershi, Eric Horvitz, Adam Fourney, Hussein Mozannar, Victor Dibia, and Daniel S Weld. 2024. "Challenges in Human-Agent Communication."（人机智能体通信中的挑战）arXiv Preprint arXiv:2412.10380.
+- Boateng, Emmanuel Aboah, Cassiano O Becker, Nabiha Asghar, Kabir Walia, Ashwin Srinivasan, Ehi Nosakhare, Soundar Srinivasan, and Victor Dibia. 2024. "Concept Distillation from Strong to Weak Models via Hypotheses-to-Theories Prompting."（通过假设到理论提示从强模型到弱模型的概念蒸馏）arXiv Preprint arXiv:2408.09365.
+- Brown, Tom B., Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, et al. 2020. "Language Models Are Few-Shot Learners."（语言模型是少样本学习者）Advances in Neural Information Processing Systems 33: 1877–1901.
+- Cheng, Kanzhi, Qiushi Sun, Yougang Chu, Fangzhi Xu, Yantao Li, Jianbing Zhang, and Zhiyong Wu. 2024. "Seeclick: Harnessing Gui Grounding for Advanced Visual Gui Agents."（SeeClick：利用 GUI 接地实现高级视觉 GUI 智能体）arXiv Preprint arXiv:2401.10935.
+- Dell'Acqua, Fabrizio, Edward McFowland III, Ethan R Mollick, Hila Lifshitz-Assaf, Katherine Kellogg, Saran Rajendran, Lisa Krayer, François Candelon, and Karim R Lakhani. 2023. "Navigating the Jagged Technological Frontier: Field Experimental Evidence of the Effects of AI on Knowledge Worker Productivity and Quality."（穿越锯齿状技术前沿：AI 对知识工作者生产力和质量影响的实地实验证据）Harvard Business School Technology & Operations Mgt. Unit Working Paper, no. 24-013.
+- Dibia, Victor. 2023. "LIDA: A Tool for Automatic Generation of Grammar-Agnostic Visualizations and Infographics Using Large Language Models."（LIDA：使用大型语言模型自动生成语法无关可视化和信息图的工具）arXiv Preprint arXiv:2303.02927.
+- Dibia, Victor, Jingya Chen, Gagan Bansal, Suff Syed, Adam Fourney, Erkang Zhu, Chi Wang, and Saleema Amershi. 2024. "Autogen Studio: A No-Code Developer Tool for Building and Debugging Multi-Agent Systems."（AutoGen Studio：构建和调试多智能体系统的无代码开发者工具）arXiv Preprint arXiv:2408.15247.
+- Dibia, Victor, Adam Fourney, Gagan Bansal, Forough Poursabzi-Sangdeh, Han Liu, and Saleema Amershi. 2022. "Aligning Offline Metrics and Human Judgments of Value for Code Generation Models."（对齐代码生成模型的离线指标与人类价值判断）arXiv Preprint arXiv:2210.16494.
+- Du, Yilun, Shuang Li, Antonio Torralba, Joshua B. Tenenbaum, and Igor Mordatch. 2023. "Improving Factuality and Reasoning in Language Models Through Multiagent Debate."（通过多智能体辩论改进语言模型的事实性和推理）arXiv Preprint arXiv:2305.14325.
+- Epperson, Will, Gagan Bansal, Victor C Dibia, Adam Fourney, Jack Gerrits, Erkang Zhu, and Saleema Amershi. 2025. "Interactive Debugging and Steering of Multi-Agent Ai Systems."（多智能体 AI 系统的交互式调试与引导）In Proceedings of the 2025 CHI Conference on Human Factors in Computing Systems, 1–15.
+- FlowiseAI. 2024. "Flowise: Build AI Agents, Visually."（Flowise：可视化构建 AI 智能体）https://flowiseai.com/.
+- Fourney, Adam, Gagan Bansal, Hussein Mozannar, Cheng Tan, Eduardo Salinas, Friederike Niedtner, Grace Proebsting, et al. 2024. "Magentic-One: A Generalist Multi-Agent System for Solving Complex Tasks."（Magentic-One：解决复杂任务的通才多智能体系统）arXiv Preprint arXiv:2411.04468.
+- Greenblatt, Ryan, Carson Denison, Benjamin Wright, Fabien Roger, Monte MacDiarmid, Sam Marks, Johannes Treutlein, et al. 2024. "Alignment Faking in Large Language Models."（大型语言模型中的对齐伪装）arXiv Preprint arXiv:2412.14093.
+- Hadfield, Jeremy, Barry Zhang, Kenneth Lien, Florian Scholz, Jeremy Fox, and Daniel Ford. 2025. "How We Built Our Multi-Agent Research System."（我们如何构建多智能体研究系统）Anthropic Engineering Blog. https://www.anthropic.com/engineering/multi-agent-research-system.
+- Jimenez, Carlos E, John Yang, Alexander Wettig, Shunyu Yao, Kexin Pei, Ofir Press, and Karthik Narasimhan. 2023. "SWE-Bench: Can Language Models Resolve Real-World GitHub Issues?"（SWE-Bench：语言模型能解决真实世界的 GitHub Issue 吗？）arXiv Preprint arXiv:2310.06770.
+- Kwa, Thomas, Ben West, Joel Becker, Amy Deng, Katharyn Garcia, Max Hasin, Sami Jawhar, et al. 2025. "Measuring AI Ability to Complete Long Tasks."（衡量 AI 完成长任务的能力）arXiv Preprint arXiv:2503.14499.
+- Li, Ang, Yin Zhou, Vethavikashini Chithrra Raghuram, Tom Goldstein, and Micah Goldblum. 2024. "Commercial LLM Agents Are Already Vulnerable to Simple yet Dangerous Attacks."（商业 LLM 智能体已易受简单而危险的攻击）arXiv Preprint arXiv:2502.08586.
+- Liang, Tian, Zhiwei He, Wenxiang Jiao, Xing Wang, Yan Wang, Rui Wang, Yujiu Yang, Zhaopeng Tu, and Shuming Shi. 2023. "Encouraging Divergent Thinking in Large Language Models Through Multi-Agent Debate."（通过多智能体辩论鼓励大型语言模型的发散思维）arXiv Preprint arXiv:2305.19118.
+- Linux Foundation. 2025. "Linux Foundation Launches the Agent2Agent Protocol Project."（Linux 基金会启动 Agent2Agent 协议项目）https://www.linuxfoundation.org/press/linux-foundation-launches-the-agent2agent-protocol-project-to-enable-secure-intelligent-communication-between-ai-agents.
+- Liu, Nelson F., Kevin Lin, John Hewitt, Ashwin Paranjape, Michele Bevilacqua, Fabio Petroni, and Percy Liang. 2024. "Lost in the Middle: How Language Models Use Long Contexts."（迷失在中间：语言模型如何使用长上下文）Transactions of the Association for Computational Linguistics 12: 157–73.
+- Lu, Yadong, Jianwei Yang, Yelong Shen, and Ahmed Awadallah. 2024. "OmniParser for Pure Vision Based GUI Agent."（用于纯视觉 GUI 智能体的 OmniParser）arXiv Preprint arXiv:2408.00203.
+- Lu, Yujia, Yichen Qian, Yue Chen, Yi Xie, Yufeng Feng, Xiaodan Lyu, Wenxuan Zhang, Wayne Xin Zhao, Ji-Rong Wen, and Ruiming Tang. 2025. "UI-TARS: Pioneering Automated GUI Interaction with Native Agents."（UI-TARS：用原生智能体开创自动化 GUI 交互）arXiv Preprint arXiv:2501.12326.
+- Luo, Xufang, Yuge Zhang, Zhiyuan He, Zilong Wang, Siyun Zhao, Dongsheng Li, Luna K. Qiu, and Yuqing Yang. 2025. "Agent Lightning: Train ANY AI Agents with Reinforcement Learning."（Agent Lightning：用强化学习训练任何 AI 智能体）https://arxiv.org/abs/2508.03680.
+- Lynch, Aengus, Benjamin Wright, Caleb Larson, Kevin K. Troy, Stuart J. Ritchie, Sören Mindermann, Ethan Perez, and Evan Hubinger. 2025. "Agentic Misalignment: How LLMs Could Be an Insider Threat."（智能体式失配：LLM 如何成为内部威胁）Anthropic Research.
+- Manus AI. 2025. "Manus: General AI Agent."（Manus：通用 AI 智能体）https://manus.im/.
+- Meta AI. 2025. "Agents Rule of Two: A Practical Approach to AI Agent Security."（智能体双人规则：AI 智能体安全的实用方法）https://ai.meta.com/blog/practical-ai-agent-security/.
+- Mialon, Grégoire, Clémentine Fourrier, Craig Swift, Thomas Wolf, Yann LeCun, and Thomas Scialom. 2023. "GAIA: A Benchmark for General AI Assistants."（GAIA：通用 AI 助手基准）arXiv Preprint arXiv:2311.12983.
+- Microsoft AI Blog. 2024. "AI at Work Is Here. Now Comes the Hard Part."（工作中的 AI 已经到来。现在进入困难部分）https://www.microsoft.com/en-us/worklab/work-trend-index/ai-at-work-is-here-now-comes-the-hard-part.
+- Microsoft Research. 2023. "AutoGen: Multi-Agent Conversation Framework."（AutoGen：多智能体对话框架）https://github.com/microsoft/autogen.
+- Minsky, Marvin. 1986. The Society of Mind.（《心智社会》）Simon; Schuster.
+- Mozannar, Hussein, Gagan Bansal, Cheng Tan, Adam Fourney, Victor Dibia, Jingya Chen, Jack Gerrits, et al. 2025. "Magentic-UI: Towards Human-in-the-Loop Agentic Systems."（Magentic-UI：走向人在回路的智能体式系统）arXiv Preprint arXiv:2507.22358.
+- n8n GmbH. 2024. "N8n: AI Workflow Automation Platform."（n8n：AI 工作流自动化平台）https://n8n.io/.
+- OpenAI. 2025. "Introducing Operator."（介绍 Operator）OpenAI Blog. https://openai.com/index/introducing-operator/.
+- Ouyang, Long, Jeffrey Wu, Xu Jiang, Diogo Almeida, Carroll L. Wainwright, Pamela Mishkin, Chong Zhang, et al. 2022. "Training Language Models to Follow Instructions with Human Feedback."（用人类反馈训练语言模型遵循指令）Advances in Neural Information Processing Systems 35: 27730–44.
+- Patwardhan, Tejal, Rachel Dias, Elizabeth Proehl, Grace Kim, Michele Wang, Olivia Watkins, Simón Posada Fishman, et al. 2025. "GDPval: Evaluating AI Model Performance on Real-World Economically Valuable Tasks."（GDPval：评估 AI 模型在真实世界经济价值任务上的表现）arXiv Preprint arXiv:2510.04374.
+- Peng, Sida, Eirini Kalliamvakou, Peter Cihon, and Mert Demirer. 2023. "The Impact of Ai on Developer Productivity: Evidence from Github Copilot."（AI 对开发者生产力的影响：来自 GitHub Copilot 的证据）arXiv Preprint arXiv:2302.06590.
+- Phan, Long, Alice Gatti, Ziwen Han, Nathaniel Li, Josephina Hu, Hugh Zhang, Chen Bo Calvin Zhang, et al. 2025. "Humanity's Last Exam."（人类的最后考试）arXiv Preprint arXiv:2501.14249.
+- Rein, David, Betty Li Hou, Asa Cooper Stickland, Jackson Petty, Richard Yuanzhe Pang, Julien Dirani, Julian Michael, and Samuel R Bowman. 2023. "GPQA: A Graduate-Level Google-Proof q&a Benchmark."（GPQA：研究生级谷歌搜索无法直接解答的问答基准）arXiv Preprint arXiv:2311.12022.
+- Russell, Stuart, and Peter Norvig. 2020. Artificial Intelligence: A Modern Approach.（《人工智能：一种现代方法》）4th ed. Pearson.
+- Shinn, Noah, Federico Cassano, Edward Berman, Ashwin Gopinath, Karthik Narasimhan, and Shunyu Yao. 2023. "Reflexion: Language Agents with Verbal Reinforcement Learning."（Reflexion：带语言强化学习的语言智能体）arXiv Preprint arXiv:2303.11366.
+- Sweller, John. 1988. "Cognitive Load During Problem Solving: Effects on Learning."（问题解决期间的认知负荷：对学习的影响）Cognitive Science 12 (2): 257–85.
+- TryCUA. 2024. "CUA: Computer Use Agent SDK."（CUA：计算机使用智能体 SDK）https://github.com/trycua/cua.
+- Vaswani, Ashish, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez, Lukasz Kaiser, and Illia Polosukhin. 2017. "Attention Is All You Need."（注意力就是你所需要的一切）Advances in Neural Information Processing Systems 30.
+- vLLM Team. 2023. "vLLM: Easy, Fast, and Cheap LLM Serving with PagedAttention."（vLLM：带 PagedAttention 的简单、快速、廉价的 LLM 服务）https://github.com/vllm-project/vllm.
+- Wang, Xilong, John Bloch, Zedian Shao, Yuepeng Hu, Shuyan Zhou, and Neil Zhenqiang Gong. 2025. "WebInject: Prompt Injection Attack to Web Agents."（WebInject：对 Web 智能体的提示词注入攻击）arXiv Preprint arXiv:2505.11717.
+- Wei, Alexander, Nika Haghtalab, and Jacob Steinhardt. 2023. "Jailbroken: How Does Llm Safety Training Fail?"（越狱：LLM 安全训练如何失败？）Advances in Neural Information Processing Systems 36: 80079–110.
+- Wei, Jason, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Brian Ichter, Fei Xia, Ed Chi, Quoc Le, and Denny Zhou. 2022. "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models."（思维链提示引出大型语言模型的推理）Advances in Neural Information Processing Systems 35: 24824–37.
+- Wu, Qingyun, Gagan Bansal, Jieyu Zhang, Yiran Wu, Shaokun Zhang, Erkang Zhu, Beibin Li, Li Jiang, Xiaoyun Zhang, and Chi Wang. 2023. "AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation Framework."（AutoGen：通过多智能体对话框架赋能下一代 LLM 应用）arXiv Preprint arXiv:2308.08155.
+- Yan, Walden. 2025. "Don't Build Multi-Agents."（不要构建多智能体）Cognition AI Blog. https://cognition.ai/blog/dont-build-multi-agents.
+- Yao, Shunyu, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, and Yuan Cao. 2022. "ReAct: Synergizing Reasoning and Acting in Language Models."（ReAct：语言模型中推理与行动的协同）arXiv Preprint arXiv:2210.03629.
+- You, Keen et al. 2024. "Ferret-UI: Grounded Mobile UI Understanding with Multimodal LLMs."（Ferret-UI：用多模态 LLM 实现接地的移动 UI 理解）arXiv Preprint arXiv:2404.05719.
+- Zhang, Chaoyun, Liqun Li, Shilin He, Xu Xu, Bo Qiao, Si Qin, Minghua Ma, et al. 2024. "Ufo: A Ui-Focused Agent for Windows Os Interaction."（UFO：用于 Windows 操作系统交互的 UI 专注智能体）arXiv Preprint arXiv:2402.07939.
+- Zhou, Yongchao, Andrei Ioan Muresanu, Ziwen Han, Keiran Paster, Silviu Pitis, Harris Chan, and Jimmy Ba. 2022. "Large Language Models Are Human-Level Prompt Engineers."（大型语言模型是人类水平的提示词工程师）In The Eleventh International Conference on Learning Representations.

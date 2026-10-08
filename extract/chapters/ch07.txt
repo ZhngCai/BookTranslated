@@ -1,0 +1,969 @@
+
+@@PAGE 257@@
+7 Building Autonomous Multi-Agent
+Orchestration
+This chapter covers:
+ 
+The orchestrator loop that underlies all coordination patterns
+Building flexible termination conditions that prevent runaway
+execution
+Implementing round-robin orchestration with streaming observability
+Practical considerations for debugging, cost management, and
+production deployment
+In Chapter  2, we explored the taxonomy of multi-agent coordination
+patterns—from explicit workflow control to emergent autonomous
+behavior. We learned that orchestration patterns exist on a spectrum, with
+workflow patterns providing predictable, developer-defined execution
+paths, and autonomous patterns enabling runtime-determined coordination
+through agent reasoning and communication.
+In Chapter  6, we explored how to build multi-agent workflows. In this
+chapter we will focus on how to implement multi-agent patterns where the
+flow of control is driven by an AI model.
+Before diving into implementation details, here’s the final developer
+experience we’re building towards—a complete orchestration system in just
+a few lines. This example demonstrates how two specialized agents (a
+researcher and a writer) collaborate through round-robin coordination, with
+flexible termination conditions that stop the conversation when either a
+maximum message count is reached or when the writer signals completion.
+First, we create two specialized agents—each with clear responsibilities and
+instructions:
+Listing 7.1: Creating specialized agents for collaboration
+
+@@PAGE 258@@
+from picoagents import Agent
+from picoagents.llm import OpenAIChatCompletionClient
+# Create two specialized agents
+researcher = Agent(
+    name="researcher",
+    instructions=(
+        "You research topics and provide "
+        "factual insights. Be concise."
+    ),
+    model_client=OpenAIChatCompletionClient(
+        model="gpt-4.1-mini"
+    )
+)
+writer = Agent(
+    name="writer",
+    instructions=(
+        "You write engaging content. "
+        "If sufficient content exists, return "
+        "a summary and end with 'TERMINATE'."
+    ),
+    model_client=OpenAIChatCompletionClient(
+        model="gpt-4.1-mini"
+    )
+)
+Next, we set up the orchestrator to coordinate these agents using round-
+robin turn-taking. Notice how we combine termination conditions using the
+| operator—the collaboration stops when either the message limit is reached
+OR when the writer signals completion:
+Listing 7.2: Configuring orchestrator with flexible termination
+from picoagents.orchestration import RoundRobinOrchestrator
+from picoagents.termination import (
+    MaxMessageTermination,
+
+@@PAGE 259@@
+    TextMentionTermination
+)
+orchestrator = RoundRobinOrchestrator(
+    agents=[researcher, writer],
+    termination=(
+        MaxMessageTermination(6) |
+        TextMentionTermination("TERMINATE")
+    )
+)
+Finally, we execute the collaboration with streaming output to observe the
+conversation in real-time:
+Listing 7.3: Running multi-agent collaboration with streaming
+task = "Write a brief article about solar energy benefits"
+async for message in orchestrator.run_stream(task):
+    print(message)
+When you run this example, you’ll see streaming output that shows each
+agent’s contribution in real-time, along with metadata about the
+collaboration. Notice how the orchestrator tracks which agent is speaking,
+maintains conversation flow, and provides clear feedback about why and
+how the conversation ended:
+Listing 7.4: Example streaming output showing agent messages, role indicators, and orchestration metadata
+🚀 Starting solar energy research collaboration...
+👤 [USER]: Write a brief article about solar energy benefits
+🔬 [RESEARCHER]: **The Benefits of Solar Energy**
+Solar energy is a renewable and sustainable power source that harnesses ...
+✍️ [WRITER]: **Summary: The Benefits of Solar Energy**
+Solar energy presents numerous benefits, making it essential for addressing ....
+
+@@PAGE 260@@
+TERMINATE
+✅ Collaboration complete! Generated 3 messages
+📊 Stop reason: Text mention found: 'TERMINATE'
+⏱️ Duration: 17,427ms
+Notice how the orchestrator:
+ 
+1. Coordinates turn-taking between the two agents in round-robin fashion
+2. Maintains shared conversation context so each agent sees the full
+history
+3. Terminates intelligently when the writer determines the task is
+complete
+4. Provides streaming observability into the coordination process
+Now let’s explore how to build this, and other orchestration systems step by
+step.
+Working Code: Autonomous Orchestration
+Explore complete autonomous orchestration implementations:
+ 
+Round-Robin: orchestration/round-robin.py - Fixed turn-taking coordination
+AI-Driven: orchestration/ai-driven.py - Intelligent agent selection
+Plan-Based: orchestration/plan-based.py - Centralized orchestrator with dynamic planning
+Core Implementation: src/picoagents/orchestration/ - Full orchestration framework
+7.1 The Orchestrator Loop
+Every orchestration pattern, regardless of how agents are selected or
+coordinated, follows the same fundamental orchestrator loop . Whether
+you’re implementing a simple round-robin approach to scheduling agents
+(agents take turns in round robin fashion until some termination condition is
+met), AI-driven selection (an AI model determines the agent to take the next
+
+@@PAGE 261@@
+turn), or a dedicated AI model crafts a plan based on some task and directs
+agents, the core architecture remains consistent:
+ 
+select the next agent
+prepare context for the agent
+execute the agent with the prepared context
+update shared state with the agent’s response
+check termination conditions
+# The core pattern that powers all orchestration
+while not termination.is_met():
+    next_agent = select_next_agent()        # Pattern-specific logic
+    context = prepare_context_for_agent()   # Pattern-specific logic
+    result = await next_agent.run(context)
+    update_shared_state(result)
+    check_termination(result)
+This core loop provides several key benefits:
+This loop delivers consistency across all patterns (making them easier to
+understand and maintain), composability (allowing you to mix different
+patterns by switching orchestrator implementations), extensibility (new
+patterns only need to implement pattern-specific methods while inheriting
+robust 
+infrastructure), 
+and 
+comprehensive 
+observability 
+(common
+instrumentation works across all pattern types).
+With this foundational understanding, let’s implement the base orchestrator
+class that powers all coordination patterns, then build specific
+implementations starting with round-robin orchestration and flexible
+termination conditions.
+7.1.1 Building the BaseOrchestrator
+Similar to our BaseAgent class in Chapter (Section  4.2.2), the
+BaseOrchestrator class (Listing 7.5) handles the complexity of streaming,
+cancellation, and state management while letting each pattern focus only on
+its specific coordination logic.
+
+@@PAGE 262@@
+The BaseOrchestrator defines the contract that all orchestration patterns
+must follow. It initializes the core components (agents, termination
+conditions, and shared state) and validates that agent names are unique to
+prevent coordination conflicts.
+Listing 7.5: BaseOrchestrator abstract class definition
+from abc import ABC, abstractmethod
+from typing import List, Optional, Sequence
+from ..agents import BaseAgent
+from ..messages import Message
+from .termination import BaseTermination
+class BaseOrchestrator(ABC):
+    """Abstract base class for all orchestration patterns."""
+    def __init__(
+        self,
+        agents: Sequence[BaseAgent],
+        termination: BaseTermination,
+        max_iterations: int = 50
+    ):
+        if not agents:
+            raise ValueError(
+                "At least one agent is required"
+            )
+        self.agents = list(agents)
+        self.termination = termination
+        self.max_iterations = max_iterations
+        # Runtime state
+        self.shared_messages: List[Message] = []
+        self.iteration_count = 0
+        # Validate agent names are unique
+        names = [agent.name for agent in agents]
+
+@@PAGE 263@@
+        if len(names) != len(set(names)):
+            raise ValueError(
+                "Agent names must be unique"
+            )
+The constructor establishes the three core components every orchestrator
+needs: a list of agents to coordinate, termination conditions that determine
+when to stop, and shared state management for tracking the conversation.
+The max_iterations parameter provides a safety fallback to prevent runaway
+execution.
+7.1.2 The Orchestrator Run Loop
+The orchestrator’s core logic lives in two methods that follow the same
+pattern we used for agents. The run_stream method provides real-time
+streaming of messages and events, while run collects everything into a
+single response for simpler use cases.
+The run loop starts by setting up the execution context, normalizing the
+input task, and preparing for streaming output:
+Listing 7.6: Orchestrator run loop setup and initialization
+async def run_stream(
+    self,
+    task: Union[str, UserMessage, List[Message]],
+    cancellation_token: Optional[CancellationToken] = None
+) -> AsyncGenerator[
+    Union[
+        Message,
+        OrchestrationEvent,
+        OrchestrationResponse
+    ],
+    None
+]:
+    """Execute orchestration with streaming output."""
+    self._reset_for_run()
+    self.start_time = time.time()
+
+@@PAGE 264@@
+    stop_message: Optional[StopMessage] = None
+    streamed_messages: List[Message] = []
+    try:
+        yield OrchestrationStartEvent(...)
+        # Normalize task to initial messages
+        initial_messages = (
+            self._normalize_task_to_messages(task)
+        )
+        self.shared_messages.extend(initial_messages)
+        # Stream initial messages to caller
+        for message in initial_messages:
+            yield message
+            streamed_messages.append(message)
+        # Check termination on initial messages
+        self.termination.check(initial_messages)
+The setup phase handles several critical responsibilities. The _reset_for_run()
+call clears any state from previous executions, ensuring each orchestration
+starts fresh. The streamed_messages list tracks all messages we’ve yielded to
+the caller—this becomes important later for termination checking. Task
+normalization handles three input formats: plain strings (converted to
+UserMessage), UserMessage objects (used directly), or full message lists
+(for continuing conversations). We check termination immediately after the
+initial messages because even the user’s input might contain stop keywords
+like “DONE” or “TERMINATE”.
+Now the orchestrator enters its main coordination loop. Each iteration
+selects an agent, runs it with appropriate context, and processes the results.
+The loop starts by selecting which agent should execute next:
+Listing 7.7: Agent selection and context preparation
+        # Main orchestration loop
+        while self.iteration_count < self.max_iterations:
+
+@@PAGE 265@@
+            # Check for cancellation
+            if (
+                cancellation_token
+                and cancellation_token.is_cancelled()
+            ):
+                raise asyncio.CancelledError()
+            # 1. Select next agent (pattern-specific)
+            next_agent = await self.select_next_agent()
+            # 2. Prepare context (pattern-specific)
+            context = await self.prepare_context_for_agent(
+                next_agent
+            )
+The select_next_agent() and prepare_context_for_agent() methods are pattern-
+specific—this is where round-robin differs from AI-driven or plan-based
+orchestration. Round-robin cycles through agents in order, while AI-driven
+orchestration uses an LLM to choose intelligently based on conversation
+state.
+After selecting an agent and preparing context, the orchestrator executes the
+agent with streaming support:
+Listing 7.8: Streaming agent execution with type guards
+            # 3. Execute agent with streaming
+            agent_messages = []
+            result: Optional[AgentResponse] = None
+            async for item in next_agent.run_stream(
+                context,cancellation_token):
+                # Type guard for Message objects
+                if (hasattr(item, "content")
+                    and hasattr(item, "role")):
+                    message_item = cast(Message, item)
+                    agent_messages.append(message_item)
+
+@@PAGE 266@@
+                    # Filter out UserMessages from streaming
+                    if not isinstance(
+                        message_item,
+                        UserMessage
+                    ):
+                        yield message_item
+                        streamed_messages.append(
+                            message_item
+                        ) 
+The streaming execution uses type guards to safely process different item
+types. We filter out UserMessages because these are just the context we sent
+to the agent, not new content. Only assistant messages get streamed to the
+caller, providing clean real-time visibility into agent responses without
+echoing the prompts.
+After agent execution completes, the orchestrator updates shared state and
+checks whether the conversation should continue:
+Listing 7.9: State updates and termination checking
+            # 4. Update shared state (pattern-specific)
+            await self.update_shared_state(result)
+            # 5. Check termination with delta messages
+            new_streamed_messages = streamed_messages[
+                self._last_termination_check_count:
+            ]
+            self._last_termination_check_count = len(
+                streamed_messages
+            )
+            stop_message = self.termination.check(
+                new_streamed_messages
+            )
+            if stop_message:
+                break
+
+@@PAGE 267@@
+            self.iteration_count += 1
+The state management phase reveals a subtle but crucial pattern: delta-
+based termination checking. Rather than re-processing the entire
+conversation history on every iteration, we track our position with
+_last_termination_check_count and only pass new messages to the termination
+checker. This is more efficient than scanning hundreds of messages
+repeatedly, and it allows termination conditions to focus on recent
+developments 
+rather 
+than 
+the 
+full 
+history. 
+The 
+pattern-specific
+update_shared_state() method is what enables different orchestration strategies
+—round-robin might append all messages, while AI-driven orchestration
+might filter or transform them based on coordination needs.
+After the loop completes (either through termination conditions or max
+iterations), the orchestrator assembles a final response with complete
+execution metrics:
+Listing 7.10: Orchestration completion and result assembly
+        # Handle max iterations case
+        if (
+            self.iteration_count >= self.max_iterations
+            and stop_message is None
+        ):
+            stop_message = StopMessage(
+                content=(
+                    f"Maximum iterations reached "
+                    f"({self.max_iterations})"
+                ),
+                source="MaxIterations"
+            )
+        # Aggregate usage from all agent executions
+        elapsed_time = int(
+            (time.time() - self.start_time) * 1000
+        )
+        total_usage = Usage(duration_ms=elapsed_time)
+
+@@PAGE 268@@
+        for agent_usage in agent_usage_stats:
+            total_usage = total_usage + agent_usage
+        # Yield final OrchestrationResponse
+        yield OrchestrationResponse(
+            messages=self.shared_messages,
+            final_result=self._generate_final_result(),
+            usage=total_usage,
+            stop_message=stop_message,
+            pattern_metadata=self._get_pattern_metadata()
+        )
+    except asyncio.CancelledError:
+        # Handle cancellation gracefully
+        raise
+The completion phase ensures we always provide a meaningful stop
+message, even when the loop exits through max iterations rather than
+explicit termination conditions. The usage aggregation is particularly
+important—each agent execution tracks its own API costs and timing, and
+we sum these together to give an accurate picture of total orchestration cost.
+The _generate_final_result() helper searches backward through messages to
+find the last assistant response, providing a concise summary rather than
+forcing callers to scan the full message history. This pattern of rich,
+complete responses makes orchestration results self-contained and easy to
+work with.
+This implementation provides the foundation for all orchestration patterns
+while handling several complex concerns:
+Streaming Observability: When debugging multi-agent systems, you need
+to see what’s happening in real-time. Which agent is running? What
+messages are being exchanged? Where did the conversation get stuck? The
+streaming interface provides this visibility, making it possible to build
+responsive UIs and debug complex interactions.
+Graceful Cancellation: Multi-agent conversations can take minutes to
+complete. Users will inevitably need to cancel them - whether because they
+
+@@PAGE 269@@
+provided the wrong prompt or the agents entered an unproductive loop.
+Clean cancellation prevents runaway API costs and ensures the system
+remains responsive.
+Robust Error Handling: In a multi-agent system, one agent’s failure
+shouldn’t crash the entire orchestration. The error handling ensures that
+exceptions are caught and logged while preserving the conversation state up
+to the failure point.
+Resource and Performance Tracking: Understanding how long
+orchestrations take and how many API calls they consume is essential for
+cost management and performance optimization. The automatic metrics
+collection provides this data without requiring manual instrumentation.
+Each orchestration pattern inherits this robust infrastructure and only needs
+to implement three pattern-specific abstract methods: select_next_agent() for
+choosing which agent executes next, 
+prepare_context_for_agent() for
+assembling the conversation context, and update_shared_state() for managing
+shared state after agent execution. This clean separation allows patterns to
+focus solely on their unique orchestration logic while benefiting from
+comprehensive streaming, cancellation, and error handling capabilities.
+7.2 Building Termination Conditions
+Termination conditions
+Looking back at our orchestrator loop, you’ll notice we conduct a
+termination check - termination.check(new_messages) at the end of each
+iteration. This is one of the most critical aspects of multi-agent systems:
+knowing when to stop.
+Without proper termination conditions, agent conversations can run
+indefinitely. You’ve probably seen chatbots get stuck in loops - the same
+problem happens with multi-agent systems, except now you’re paying for
+multiple API calls per loop iteration. You need termination conditions that
+are both reliable and flexible.
+
+@@PAGE 270@@
+7.2.1 The BaseTermination Interface
+To build a termination system that can handle simple rules (“stop after 5
+messages”) and complex combinations (“stop after 10 messages OR if
+someone says ‘DONE’ OR after 5 minutes”), we start with a common base
+class:
+from abc import ABC, abstractmethod
+from typing import List, Optional, Dict, Any, Sequence
+from ..messages import Message
+from ..types import StopMessage
+class BaseTermination(ABC):
+    """Abstract base class for all termination conditions."""
+    
+    def __init__(self) -> None:
+        self._met = False
+        self._reason = ""
+        self._metadata: Dict[str, Any] = {}
+    
+    @abstractmethod
+    def check(self, new_messages: Sequence[Message]) -> Optional[StopMessage]:
+        """Check termination on delta messages."""
+        pass
+    
+    def is_met(self) -> bool:
+        return self._met
+    
+    def reset(self) -> None:
+        self._met = False
+        self._reason = ""
+        self._metadata = {}
+    
+    def __or__(self, other: 'BaseTermination') -> 'CompositeTermination':
+        return CompositeTermination([self, other], mode="any")
+
+@@PAGE 271@@
+    def __and__(self, other: 'BaseTermination') -> 'CompositeTermination':
+        return CompositeTermination([self, other], mode="all")
+The __or__ and __and__ methods enable Python’s | and & operators for
+combining conditions. This lets you write intuitive termination logic like
+MaxMessages(5) | TextMention("DONE").
+Notice that termination conditions receive delta messages - only new
+messages since the last check. This is more efficient than re-processing the
+entire conversation each time and allows conditions to react to recent
+developments rather than scanning everything repeatedly.
+7.2.2 Common Termination Patterns
+The two most common termination patterns are message count limits and
+text-based triggers. Here’s how they work conceptually:
+# Conceptual: Message count termination
+class MaxMessageTermination(BaseTermination):
+    """Stop after N messages."""
+    def check(self, new_messages):
+        self.count += len(new_messages)
+        if self.count >= self.max_messages:
+            return StopMessage(f"Reached {self.count} messages")
+        return None
+# Conceptual: Text-based termination
+class TextMentionTermination(BaseTermination):
+    """Stop when specific text appears."""
+    def check(self, new_messages):
+        for message in new_messages:
+            if self.search_text in message.content:
+                return StopMessage(f"Found '{self.text}'")
+        return None
+
+@@PAGE 272@@
+Both conditions extend BaseTermination and implement the check() method.
+The key difference: MaxMessageTermination tracks cumulative count across all
+checks, while TextMentionTermination scans each new message for the trigger
+phrase. The framework includes additional termination types like
+TokenUsageTermination (budget limits), TimeoutTermination (time limits), and
+HandoffTermination (agent-initiated transfers).
+7.2.3 Composable Termination Logic
+Here’s where the | and & operators we defined earlier become useful. You
+can combine termination conditions to handle complex scenarios:
+# Terminate after 20 messages OR when someone says "DONE" OR after 5 minutes
+termination = (
+    MaxMessageTermination(20) |
+    TextMentionTermination("DONE") |
+    TimeoutTermination(300)
+)
+# Terminate only when BOTH conditions are met
+complex_termination = (
+    MaxMessageTermination(10) &
+    TextMentionTermination("COMPLETE")
+)
+This composability means you can build sophisticated stopping logic
+without writing complex conditional code. Each condition remains simple
+and testable, but their combinations can handle nuanced requirements.
+7.3 
+Implementing 
+Round-Robin
+Orchestration
+With our foundation in place—the orchestrator loop and flexible
+termination system—we can now build specific coordination patterns. Let’s
+start with the simplest: round-robin orchestration .
+
+@@PAGE 273@@
+Round-robin coordination is like a structured meeting where each
+participant gets a turn to speak in order. This pattern works well when you
+want balanced participation from all agents and a predictable conversation
+flow.
+7.3.1 The RoundRobinOrchestrator Implementation
+The RoundRobinOrchestrator implements the three abstract methods to
+create a simple but effective turn-taking pattern. First, we extend the base
+class and add an index to track which agent should go next:
+Listing 7.11: RoundRobinOrchestrator initialization
+from typing import Union, List
+from ._base import BaseOrchestrator
+from ..agents import BaseAgent
+from ..messages import Message, UserMessage
+from ..types import AgentResponse
+class RoundRobinOrchestrator(BaseOrchestrator):
+    """Round-robin orchestration pattern."""
+    def __init__(
+        self,
+        agents: Sequence[BaseAgent],
+        termination: BaseTermination,
+        max_iterations: int = 50
+    ):
+        super().__init__(
+            agents,
+            termination,
+            max_iterations
+        )
+        self.current_agent_index = 0
+The three pattern-specific methods are straightforward:
+
+@@PAGE 274@@
+# Round-robin agent selection
+async def select_next_agent(self) -> BaseAgent:
+    """Cycle through agents in order."""
+    agent = self.agents[self.current_agent_index]
+    self.current_agent_index = (
+        (self.current_agent_index + 1) % len(self.agents)
+    )
+    return agent
+# Context preparation: share full history
+async def prepare_context_for_agent(
+    self, agent: BaseAgent
+) -> str:
+    """Format conversation history for next agent."""
+    context = "Team progress so far:\n\n"
+    for msg in self.shared_messages:
+        context += f"{msg}\n"
+    return context + "\nIt is now your turn."
+# State management: append new messages
+async def update_shared_state(
+    self, result: AgentResponse
+) -> None:
+    """Add agent's new messages to shared history."""
+    new_messages = result.messages[1:]  # Skip context echo
+    self.shared_messages.extend(new_messages)
+This implementation is remarkably simple because it inherits all the
+complex infrastructure from BaseOrchestrator. The round-robin pattern only
+needs to specify:
+ 
+1. Agent Selection: Cycle through agents in order
+2. Context Preparation: Share the full conversation history
+3. State Management: Append new messages to shared state
+Tip
+
+@@PAGE 275@@
+You can use a simple RoundRobinOrchestrator to implement many simple use cases and it
+often requires the least amount of code. Excellent for a first version of most prototyping work.
+Note
+You will notice here that the prepare_context_for_agent() method formats the entire conversation
+history as a single string. This is a straightforward approach that works well for many
+scenarios, but in practice, you may want to implement more sophisticated context management
+strategies to handle longer conversations or optimize token usage. Sometimes, even selecting
+multiple formats - json, markdown, or plain text - for different agents can be can influence the quality
+of responses as these can impact the underlying model’s behaviour.
+One of the drawbacks of using a framework or library (despite the simplicity and ease of use)
+is that choices like this become slightly opaque. As we walk through more complex
+implementations, keep this in mind - the decisions made by a framework may not always align
+perfectly with your specific use case, and you may need to customize or extend the base
+classes to fit your needs.
+The round-robin orchestrator we just implemented is the same as what we
+introduced earlier in Listing 7.2. Of course, you can extend this for more
+complex scenarios. For example, a three-agent research team might include
+a researcher, writer, and critic that cycle through multiple rounds of
+refinement:
+# Three-agent workflow with iterative improvement
+termination = MaxMessageTermination(12) | TextMentionTermination("FINAL VERSION")
+orchestrator = RoundRobinOrchestrator(
+    agents=[researcher, writer, critic], 
+    termination=termination
+)
+Key behavioral patterns you can expect:
+ 
+Researchers gather information and provide factual insights
+Writers synthesize research into coherent content
+Critics provide feedback and suggest improvements
+
+@@PAGE 276@@
+Iterative refinement continues until termination conditions are met
+7.3.2 Observability and Debugging
+The streaming interface from our earlier example provides comprehensive
+observability. Beyond basic message flow, you can monitor detailed
+orchestration events for debugging:
+ 
+Agent selection events: Which agent was chosen and why
+Execution timing: How long each agent takes to respond
+Context size: How much conversation history each agent receives
+Termination triggers: Exactly what caused the conversation to end
+This observability is crucial for debugging complex multi-agent interactions
+and optimizing system performance.
+7.4 AI-Driven Orchestration
+Round-robin orchestration works well when you want predictable turn-
+taking, but what if you need more intelligent coordination? What if the
+conversation needs a researcher’s input before the writer can continue, or if
+the critic should wait until there’s substantial content to review?
+AI-driven orchestration solves this by using an LLM to analyze the
+conversation and decide which agent should speak next. Instead of
+following a fixed order, the system adapts to the actual conversation needs.
+The key insight is that we can reuse all the infrastructure from round-robin
+orchestration and only change the 
+select_next_agent() method. This
+pseudocode illustrates how an LLM analyzes the conversation context and
+agent capabilities to make intelligent selection decisions:
+Listing 7.12: AI-driven agent selection using LLM reasoning
+# Pseudocode for AI-driven agent selection
+async def select_next_agent() -> BaseAgent:
+    # 1. Gather agent capabilities
+
+@@PAGE 277@@
+    capabilities = get_agent_capabilities_summary()
+    
+    # 2. Format recent conversation context
+    conversation_context = format_conversation_for_selection()
+    
+    # 3. Create selection prompt
+    prompt = f"""You are coordinating AI agents.
+Available agents: {capabilities}
+Recent conversation: {conversation_context}
+Choose which agent should respond next
+based on conversation needs."""
+    # 4. Get structured LLM decision
+    result = await llm_client.create(
+        messages=[UserMessage(content=prompt)],
+        output_format=AgentSelection
+    )
+    # 5. Return selected agent
+    return find_agent_by_name(
+        result.structured_output.selected_agent
+    )
+Instead of fixed cycling, the LLM analyzes conversation context and agent
+capabilities to make intelligent selections, enabling adaptive coordination
+that responds to actual conversation needs.
+The same agents from our round-robin example can be used with AI
+orchestration, but the conversation flow adapts dynamically:
+# Same agents as round-robin example
+researcher = Agent(
+    name="researcher",
+    instructions="Research specialist...",
+    ...
+
+@@PAGE 278@@
+)
+writer = Agent(
+    name="writer",
+    instructions="Content writer...",
+    ...
+)
+termination = (
+    MaxMessageTermination(6) |
+    TextMentionTermination("TERMINATE")
+)
+# Switch to AI orchestration - intelligent selection
+orchestrator = AIOrchestrator(
+    agents=[researcher, writer],
+    termination=termination,
+    model_client=OpenAIChatCompletionClient(
+        model="gpt-4.1-mini"
+    )
+)
+# Adaptive flow based on LLM decisions:
+# -> LLM selects researcher (need: information)
+# -> LLM selects writer (research complete)
+# -> Writer requests more data
+# -> LLM selects researcher (need: clarification)
+# -> LLM selects writer (info provided)
+# -> "TERMINATE"
+The conversation naturally adapts - if the writer needs more information,
+the LLM will select the researcher again rather than forcing a fixed
+alternating pattern.
+Tip
+AI-driven orchestration is straightforward to implement once you have the right agent
+components. The LLM handles coordination decisions, and structured output ensures reliable
+agent selection with reasoning.
+
+@@PAGE 279@@
+Trade-off: This pattern adds LLM costs for each agent selection, as conversation history and
+agent capabilities are included in every coordination request.
+7.5 Plan-Based Orchestration
+Both round-robin and AI-driven orchestration make moment-to-moment
+decisions about which agent should act next. Plan-based orchestration
+takes a different approach: it creates an explicit execution plan upfront, then
+systematically works through each step while monitoring progress.
+This pattern works well when tasks require structured decomposition—
+breaking a complex goal into clear sequential steps with specific agent
+assignments. Think of it as having a project manager who creates a task list,
+assigns each task to the right specialist, verifies completion, and handles
+retries when things don’t work as expected.
+7.5.1 LLM-Generated Execution Plans
+The orchestrator starts by using an LLM to analyze the task and agent
+capabilities, then generates a structured execution plan. Unlike round-robin
+(which just cycles through agents) or AI-driven orchestration (which selects
+one agent at a time), plan-based orchestration needs to reliably extract
+multiple structured steps from the LLM response. This is where
+structured output becomes essential.
+We define the plan structure using Pydantic models that the LLM must
+conform to:
+Listing 7.13: Structured models for execution plans
+class PlanStep(BaseModel):
+    """Single step in an execution plan."""
+    task: str = Field(
+        description="Clear, actionable task description"
+    )
+    agent_name: str = Field(
+
+@@PAGE 280@@
+        description="Name of agent for this step"
+    )
+    reasoning: str = Field(
+        description="Why this agent was chosen"
+    )
+class ExecutionPlan(BaseModel):
+    """Complete execution plan."""
+    steps: List[PlanStep] = Field(
+        description="Ordered list of steps"
+    )
+With these models defined, the orchestrator can request structured plans
+from the LLM. The critical part is the output_format parameter, which
+constrains the model to return valid ExecutionPlan objects rather than free-
+form text:
+Listing 7.14: LLM-based plan generation with structured output
+async def create_plan(self, task: str) -> ExecutionPlan:
+    """Create execution plan using LLM."""
+    capabilities = self.get_agent_capabilities_summary()
+    planning_prompt = f"""You are a helpful assistant
+that breaks down tasks into executable steps.
+Available agents and their capabilities:
+{capabilities}
+User task: {task}
+Generate a concise execution plan. For each step:
+- Assign to the agent best suited for that work
+- Provide clear, actionable task description
+- Explain briefly why that agent was chosen
+
+@@PAGE 281@@
+Keep it focused. If only 2-3 steps needed, that's fine.
+"""
+    result = await self.model_client.create(
+        messages=[UserMessage(content=planning_prompt)],
+        output_format=ExecutionPlan  # Enforces structure
+    )
+    return result.structured_output  # Guaranteed ExecutionPlan
+The 
+output_format=ExecutionPlan 
+parameter 
+is 
+crucial—it 
+transforms
+unpredictable LLM text into reliable data structures. Without this, parsing
+free-form responses like “First, the researcher should gather facts, then the
+writer creates content” would be fragile and error-prone. Structured output
+ensures every plan has clearly defined steps with agent assignments that the
+orchestrator can execute programmatically.
+This approach transforms vague goals into concrete action items. A task like
+“research and write a guide about renewable energy” becomes a structured
+plan: Step 1 (researcher: gather key facts), Step 2 (writer: create structured
+content), Step 3 (reviewer: verify accuracy).
+7.5.2 Step Progress Evaluation
+Unlike simpler orchestration patterns, plan-based coordination needs to
+verify that each step actually accomplished its goal before moving forward.
+This evaluation must be programmatic—the orchestrator can’t just hope the
+step worked, it needs a clear boolean decision to drive retry logic.
+Again, structured output is essential. We define what a proper evaluation
+looks like:
+Listing 7.15: Structured model for step progress assessment
+class StepProgressEvaluation(BaseModel):
+    """Evaluation of step completion."""
+    step_completed: bool = Field(
+        description="Whether step was successful"
+
+@@PAGE 282@@
+    )
+    failure_reason: str = Field(
+        description="Explanation if failed"
+    )
+    confidence_score: float = Field(
+        description="Confidence (0.0 to 1.0)",
+        ge=0.0,
+        le=1.0
+    )
+    suggested_improvements: List[str] = Field(
+        description="Suggestions for retry if failed"
+    )
+The model ensures every evaluation includes a clear success/failure
+decision, reasoning, and actionable suggestions. After each agent execution,
+the orchestrator uses structured output to get reliable evaluations. The
+evaluation process asks an LLM to assess whether the agent’s work
+accomplished the step’s goal:
+# Conceptual: Step evaluation with structured output
+async def evaluate_step_progress(
+    step: PlanStep,
+    agent_result: AgentResponse
+) -> StepProgressEvaluation:
+    """Ask LLM: Did the agent complete this step successfully?"""
+    # Build evaluation prompt with step context
+    eval_prompt = f"""
+    Expected: {step.task} (assigned to {step.agent_name})
+    Agent produced: {agent_result.content}
+    Was this step completed successfully?
+    """
+    # Get structured evaluation (not free-form text)
+    evaluation = await llm.create(
+        messages=[eval_prompt],
+
+@@PAGE 283@@
+        output_format=StepProgressEvaluation
+    )
+    # Returns: {step_completed: bool, failure_reason: str,
+    #          confidence: float, suggested_improvements: List[str]}
+    return evaluation.structured_output
+The output_format parameter is what makes programmatic retry possible.
+Without structured output, the LLM might return vague assessments like
+“looks pretty good” or “might need work”—responses that can’t drive retry
+logic. With structured output, we get a guaranteed boolean decision, explicit
+reasoning, and actionable suggestions that the orchestrator can use to
+enhance the next attempt.
+7.5.3 Intelligent Retry Logic
+When step evaluation indicates failure, the plan-based orchestrator doesn’t
+just move on or halt completely. Instead, it retries the step with enhanced
+context based on the failure analysis. This retry logic fits into the same
+update_shared_state pattern we saw earlier, but now with evaluation and retry
+tracking:
+# Conceptual: Retry logic in plan-based orchestration
+async def update_shared_state(result: AgentResponse):
+    """Handle step completion, evaluation, and retry."""
+    # Evaluate what the agent just did
+    evaluation = await evaluate_step_progress(
+        current_step,
+        result
+    )
+    if evaluation.step_completed:
+        # Success - move forward
+        move_to_next_step()
+        reset_retry_count()
+    else:
+
+@@PAGE 284@@
+        # Failed - try again with enhanced context
+        increment_retry_count()
+        if retries_remaining():
+            # Build enhanced instructions for next attempt
+            retry_context = build_retry_context(
+                evaluation.failure_reason,
+                evaluation.suggested_improvements
+            )
+            store_retry_instructions(retry_context)
+            # Next iteration will retry same step with context
+        else:
+            # Max retries exceeded - move on
+            move_to_next_step()
+            reset_retry_count()
+The key insight is that retry instructions become part of the agent’s context
+on the next attempt. When prepare_context_for_agent runs again for the same
+step, it includes the failure analysis: “Previous attempt failed because X.
+Try improving Y and Z.” This targeted feedback significantly improves
+success rates compared to blind retries.
+When to Use Plan-Based Orchestration
+Plan-based orchestration works best for:
+ 
+Multi-phase pipelines with clear sequential stages (research -> write -> review)
+Quality-critical tasks where automated verification catches failures before proceeding
+Recoverable failures where retry with feedback significantly improves success rates
+Key enabler: Structured output makes this pattern possible—without reliable data structures
+for plans and evaluations, programmatic retry logic wouldn’t work.
+Cost consideration: This pattern requires 2+ LLM calls per step (planning + evaluation +
+execution). Use round-robin for simple turn-taking or AI-driven for dynamic coordination
+when explicit planning isn’t needed.
+
+@@PAGE 285@@
+7.6 Exercises
+Custom Termination Conditions: Implement additional termination
+patterns beyond message count and text mention. For example, create a
+FunctionTermination that calls an external function to determine when to stop,
+or a TokenBudgetTermination that tracks cumulative token usage and halts when
+a budget is exceeded.
+Handoff Orchestration: Extend the orchestration patterns to support direct
+agent-to-agent handoffs. Instead of the orchestrator always selecting the
+next agent, allow agents to explicitly transfer control to specific colleagues
+based on their assessment of task requirements.
+Performance Comparison: Implement comprehensive metrics collection
+for orchestration runs (execution time, token usage, message counts, agent
+selection patterns). Use these metrics to compare the same task across
+different orchestration methods—how do round-robin, AI-driven, and plan-
+based patterns differ in cost and effectiveness for various use cases?
+Context Management Strategies: Experiment with different approaches to
+context preparation in prepare_context_for_agent(). Compare concatenated text
+versus structured formats (JSON, markdown tables). Test limiting context
+to recent N messages versus full history. Measure how these choices impact
+agent response quality and token costs.
+7.7 Summary
+We’ve built a complete orchestration system that coordinates multiple
+agents in sophisticated conversations. The key insights from this
+implementation:
+ 
+The Orchestrator Loop: All orchestration patterns share the same
+foundational loop, providing consistency and composability across
+different coordination approaches.
+
+@@PAGE 286@@
+Flexible Termination: Composable termination conditions prevent
+runaway execution while allowing sophisticated stopping logic that
+adapts to different use cases and requirements.
+Streaming 
+Observability: 
+Real-time 
+event 
+streams 
+provide
+unprecedented visibility into multi-agent coordination decisions,
+enabling effective debugging, monitoring, and user interface
+development.
+Pattern Extensibility: The abstract base class handles complex
+infrastructure concerns while allowing each pattern to focus only on its
+specific coordination logic through clean extension points.
+Production Considerations: Built-in support for cancellation, error
+handling, resource tracking, and context management makes the
+system suitable for real-world deployment scenarios.
+The round-robin orchestrator demonstrates how this architecture enables
+building sophisticated coordination patterns with minimal code. The same
+foundation supports the advanced patterns outlined above, each requiring
+only pattern-specific implementations of the three abstract methods while
+inheriting all the robust infrastructure we’ve built.
+OceanofPDF.com

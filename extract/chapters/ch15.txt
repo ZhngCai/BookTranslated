@@ -1,0 +1,537 @@
+
+@@PAGE 480@@
+15 Building a Software Engineering
+Agent
+This chapter covers:
+ 
+Designing tools for software engineering agents: file operations, code
+execution, memory, and meta-cognition
+Crafting prompts that guide agent workflows through planning,
+execution, and verification
+Configuring compaction, hooks, and context isolation for long-running
+tasks
+Evaluating agent performance empirically on a real code review task
+15.1 Introduction
+In Chapter Chapter 14, we built a deterministic workflow with predefined
+steps to extract insights from documents. That approach works well when
+the solution path is clear. But what happens when the right answer isn’t
+known in advance—when the task requires exploration, iteration, and
+adaptive problem-solving?
+Software engineering is exactly this kind of problem. Writing code means
+juggling context from requirements and existing codebases, planning task
+decomposition, applying diverse expertise (design patterns, testing,
+debugging), running tests, fixing bugs, and often iterating multiple times
+before arriving at a working solution. The complexity doesn’t fit neatly into
+a fixed workflow.
+Instead of scripting every possible action, we’ll build a software
+engineering agent that autonomously decides how to approach tasks. In the
+taxonomy from Chapter  2, this is an autonomous pattern: the flow of
+control is driven by the model’s reasoning, not a predefined workflow. Give
+the agent powerful tools, clear instructions, and memory to track progress,
+then let it decide how to proceed. This agent + tools + memory pattern is
+
+@@PAGE 481@@
+the foundation of every modern AI coding assistant — GitHub Copilot
+Agent Mode, Cursor, Anthropic’s Claude Code, OpenAI Codex, and
+Windsurf all use variations of this design, built on the execution loop and
+design principles from Section 4.1.
+The key insight: an agent is only as capable as the tools it has and the
+instructions that guide their use. Agent capabilities emerge from the
+interplay between tools (what actions are possible), prompts (how to use
+those tools), and context engineering (how to sustain performance across
+long tasks). We covered the individual building blocks in Chapter 4. This
+chapter puts them together into a working software engineering agent and
+evaluates it on a real codebase.
+Working Code: Software Engineering Agent
+ 
+Agent implementation: the swe_agent/ directory in examples/agents
+Compaction benchmark: the compaction.ipynb notebook in examples/contextengineering — runs
+the code review experiment with cached results and charts
+15.2 Designing Tools for a Software
+Engineering Agent
+How do we determine what tools an agent needs? Start with a thought
+exercise: imagine mentoring a smart but junior developer through their first
+coding task. What would you tell them?
+You’d outline a workflow: First, understand the requirements. If modifying
+existing code, read and understand the current implementation. Make your
+changes incrementally. Test each change. Debug failures. Document your
+work.
+The agent differs from a junior developer in one key way: the underlying
+LLM already possesses strong reasoning and coding skills. It can write
+quality code, debug errors, and compose complex solutions. What it lacks is
+the ability to interact with your file system, execute commands, or persist
+
+@@PAGE 482@@
+state. The tools you provide give the agent this operational capability. Once
+equipped with tools like write_file or bash_execute, the agent can apply its
+existing intelligence to actual implementation. The prompt (discussed later
+in this chapter) guides which tools to use and when, while the LLM’s
+capabilities handle how to use them effectively.
+Our software engineering agent uses five categories of tools. PicoAgents
+provides ready-made implementations of all of these in picoagents/tools/ —
+we encourage reviewing the source for implementation details. Here, we
+focus on what each category does and why it matters.
+15.2.1 File Operations
+Before an agent can write code, it needs to understand the existing codebase
+and make targeted changes. The file operations tools provide this capability
+through four complementary functions.
+from picoagents.tools import create_coding_tools
+tools = create_coding_tools(workspace=Path("./workspace"))
+The create_coding_tools function returns a collection of file operation tools:
+ 
+read_file: Reads file contents to understand existing code
+write_file: Creates new files or edits existing ones with three modes
+(full rewrite, string replacement, or line insertion)
+list_directory: Explores project structure recursively to discover
+relevant files
+grep_search: Searches for patterns across multiple files to locate specific
+code
+Design principles:
+ 
+Workspace isolation: All operations scoped to a workspace directory
+for security
+
+@@PAGE 483@@
+Granular edits: str_replace allows surgical changes without rewriting
+entire files
+Search capability: grep_search enables finding patterns before editing
+Why these matter:
+The str_replace mode is critical. Without it, the agent must:
+ 
+1. Read entire file
+2. Rewrite entire file with changes
+3. Risk introducing errors in unchanged sections
+With str_replace:
+write_file(
+    file_path="calculator.py",
+    mode="str_replace",
+    old_str=(
+        "def add(a, b):\n"
+        "    return a + b"
+    ),
+    new_str=(
+        "def add(a, b):\n"
+        '    """Add two numbers."""\n'
+        "    return a + b"
+    ),
+)
+This surgical precision reduces errors and preserves formatting.
+15.2.2 Code Execution
+Writing code without being able to run it is like cooking without being able
+to taste. The agent needs execution tools to verify its work and iterate based
+on real feedback. Two execution tools provide this capability:
+
+@@PAGE 484@@
+# Python REPL for immediate testing
+python_repl(code="print(add(2, 3))")  # -> 5
+# Bash execution for running tests, installing packages
+bash_execute(command="python -m pytest tests/")
+The python_repl tool executes Python code snippets directly and returns
+results, useful for quick testing and exploration. The bash_execute tool runs
+shell commands for tasks like running test suites, installing packages, or
+building projects.
+Why execution tools are essential:
+Without execution, the agent operates blindly:
+ 
+Writes code it cannot verify
+Suggests tests it cannot run
+Cannot debug failures
+With execution:
+ 
+Immediate feedback loop: Write -> Test -> Fix
+Confidence in results: If tests pass, code works
+Iterative refinement: Failed tests guide corrections
+15.2.3 Memory System
+Unlike the file operations tools that work with code files, the MemoryTool
+(introduced in Section 4.8) provides persistent storage for the agent’s own
+knowledge and decision-making process across conversations.
+from picoagents.tools import MemoryTool
+memory = MemoryTool(base_path="./agent_memory")
+
+@@PAGE 485@@
+The MemoryTool supports five operations that mirror file operations but are
+dedicated to the agent’s internal knowledge base:
+ 
+view: Browses the memory directory structure to see what the agent has
+learned
+create: Creates new memory files to store patterns, decisions, or plans
+search: Finds patterns across all memory files using text search
+append: Adds entries to log files for tracking decisions over time
+str_replace: Edits existing memory content, such as updating task
+checklists
+Memory enables learning:
+# First task: Build calculator
+Agent creates: /memories/patterns/testing_pattern.md
+"Always use pytest for Python projects. Include edge cases."
+# Second task: Build another module
+Agent searches memory -> finds testing pattern -> applies it
+The agent builds institutional knowledge that persists beyond individual
+conversations.
+15.2.4 Meta-Cognitive and Coordination Tools
+The tools above enable action: reading files, writing code, executing
+commands. But effective problem-solving also requires reflection and
+structured progress tracking. Three tools provide this:
+from picoagents.tools import (
+    ThinkTool, TodoWriteTool, TodoReadTool
+)
+ThinkTool gives the agent a scratch pad for reasoning without taking
+action:
+
+@@PAGE 486@@
+think(thought="""
+Analyzing the task:
+1. Need to handle division by zero
+2. Tests should cover edge cases
+3. Can use the testing pattern from memory
+""")
+TodoWriteTool and TodoReadTool provide structured task tracking. The
+agent creates a todo list, marks items as it works, and reads the list to check
+progress:
+todo_write(todos=[
+    {"content": "Read all .py files",
+     "status": "in_progress"},
+    {"content": "Document quality issues",
+     "status": "pending"},
+    {"content": "Write summary report",
+     "status": "pending"},
+])
+These tools are meta-cognitive. They don’t modify code or execute
+commands. They give the agent space to plan before acting and track what
+remains. The todo list also integrates with loop-level hooks from
+Section 4.12.5: a CompletionCheckHook can read the todo list to verify the agent
+has actually finished before allowing the loop to exit.
+15.3 The Critical Role of Prompts
+Tools provide capability, but prompts provide guidance. Consider the
+difference:
+15.3.1 Minimal Prompt (Poor Results)
+agent = Agent(
+    name="coder",
+    instructions="You can write code. Use tools to help the user.",
+
+@@PAGE 487@@
+    tools=[...],
+)
+Result: The agent doesn’t know:
+ 
+When to check memory
+How to structure its workflow
+How to determine task completion
+How to handle errors
+15.3.2 Detailed Prompt (Good Results)
+A well-structured prompt guides the agent through a systematic workflow.
+Here’s the agent setup with the beginning of the prompt:
+agent = Agent(
+    name="software_engineer",
+    instructions="""
+You are an expert software engineering agent.
+## PHASE 1: MEMORY CHECK (ALWAYS DO THIS FIRST)
+1. Use memory tool to view /memories directory
+2. Check for relevant patterns and previous decisions
+3. Apply any lessons from past tasks
+## PHASE 2: PLANNING
+1. Use think tool to analyze requirements
+2. Use todo_write to create a structured task list
+3. Mark the first task as in_progress
+The planning and memory-check phases ensure the agent starts with
+context. Next comes execution:
+## PHASE 3: EXECUTION
+For each task in your todo list:
+1. Use coding tools (read_file, write_file, bash_execute)
+2. Test changes immediately
+
+@@PAGE 488@@
+3. Use todo_write to mark completed, start next task
+4. Log important decisions to /memories/decisions/
+## PHASE 4: VERIFICATION
+1. Run tests to verify implementation
+2. Use todo_read to check all tasks are completed
+3. Verify code quality (documentation, error handling)
+## PHASE 5: COMPLETION
+Before finishing, verify ALL todos are marked complete.
+If blocked, explain what remains and why.
+NEVER stop with in_progress or pending tasks.
+""",
+    tools=[...],
+)
+This structured approach transforms raw capability into systematic
+execution. Each phase has clear objectives. The todo list provides a
+persistent, machine-readable record of progress that hooks can also inspect
+(see Section 4.12.5).
+15.3.3 Prompt Engineering Principles
+Several patterns make these prompts effective. Explicit workflow
+structure breaks the task into numbered phases (memory check, planning,
+execution, verification, completion), preventing the agent from jumping
+randomly between actions. Memory-first ensures the agent checks for prior
+patterns before starting fresh. Progress tracking tells the agent how to
+record progress — use todo_write to maintain a structured list, or markdown
+checkboxes in memory files. Without this, the agent has no systematic way
+to know what remains.
+Completion criteria are critical. The agent stops when the LLM decides
+not to call any more tools (see Section 4.2). If “done” is vague, the agent
+stops prematurely. Spell out what done means: all planned steps complete,
+tests passing, code documented. Finally, error handling guidance prevents
+
+@@PAGE 489@@
+the agent from giving up at the first failure. Instruct it to analyze errors, try
+alternatives, and log failures to memory.
+15.4 How Task Completion Works
+The agent execution loop (Section  4.2) exits when the LLM returns a
+response without tool calls. This places responsibility on three things: your
+prompt (to define clear completion criteria), your tools (to provide feedback
+the LLM can evaluate), and optionally, hooks (to verify completion
+externally).
+For short tasks, prompt-based completion criteria are sufficient. Tell the
+agent what “done” means and it will stop at the right time. For long-running
+tasks across many files, the agent may stop prematurely — it reads 6 of 30
+files and writes a confident summary. This is the early stopping problem
+from Section 4.12.5.
+The progression of robustness:
+ 
+1. Prompt-only: Clear criteria in instructions (“do not stop until all files
+are reviewed”). Works for simple tasks.
+2. Todo tracking: The agent uses todo_write to maintain a checklist. A
+CompletionCheckHook reads the list before allowing exit. Deterministic, no
+extra LLM call.
+3. LLM judge: An LLMCompletionCheckHook asks a separate model whether
+the task is actually complete based on tool call evidence, not the
+agent’s claims. Most robust for open-ended tasks.
+All three approaches are available in PicoAgents. The hooks were
+introduced in Section  4.12.5. In the next section, we’ll see how they
+perform on a real task.
+15.5 A Complete Example: Code Review
+Agent
+
+@@PAGE 490@@
+To see how tools, prompts, and context engineering work together, we run a
+code review agent on a real repository: the handtracking project, a Python
+codebase with 44 .py files across multiple directories (model training,
+utilities, protobuf modules). The agent’s task is to explore every directory,
+read every file, and produce a summary of quality issues and architecture
+recommendations.
+This is a task that benefits from context engineering (Section 4.12). A 44-
+file repository is manageable, but real codebases have hundreds or
+thousands of files. Even here, reading every file generates enough tokens
+that context rot degrades performance well before hitting hard limits — the
+agent starts losing track of its instructions and earlier findings as tool results
+accumulate.
+15.5.1 Agent Setup
+from picoagents import Agent, LLMCompletionCheckHook
+from picoagents.compaction import HeadTailCompaction
+from picoagents._hooks import PlanningHook
+from picoagents.llm import AzureOpenAIChatCompletionClient
+from picoagents.tools import create_coding_tools
+client = AzureOpenAIChatCompletionClient(
+    model="gpt-4.1-mini", ...
+)
+agent = Agent(
+    name="code_reviewer",
+    instructions="""You are a senior code reviewer.
+    Explore every directory. Read every .py file.
+    Produce a summary with quality issues and
+    architecture recommendations.""",
+    model_client=client,
+    tools=create_coding_tools(workspace=repo_path),
+    compaction=HeadTailCompaction(
+        token_budget=15_000, head_ratio=0.2
+    ),
+
+@@PAGE 491@@
+    start_hooks=[PlanningHook()],
+    end_hooks=[
+        LLMCompletionCheckHook(max_restarts=5)
+    ],
+    max_iterations=50,
+)
+The agent uses HeadTailCompaction to stay within a 15K token budget, a
+PlanningHook to create a task list before starting, and an LLMCompletionCheckHook
+that verifies the review is thorough before allowing exit. The tools are read-
+only (read_file, list_directory) since this is a review, not a modification task.
+15.5.2 What Happens When It Runs
+Here is a condensed trace of the agent working through the code review.
+Each block is one LLM call, showing the tools the agent chose and the key
+decisions it made:
+Call 1 (PlanningHook injects planning instruction):
+  → todo_write: [
+      "Explore top-level directories",
+      "Read all .py files in each directory",
+      "Document quality issues",
+      "Write architecture summary"
+    ]
+Calls 2-4 (Exploration):
+  → list_directory("/") → 8 subdirectories found
+  → list_directory("/utils") → 6 .py files
+  → read_file("/utils/detector_utils.py")
+Calls 5-15 (Systematic file reading):
+  → read_file (one file per call, working through
+    /utils, /model, /protos directories)
+  → todo_write: mark "Explore top-level" complete
+Calls 16-20 (Deeper directories):
+
+@@PAGE 492@@
+  → list_directory("/model") → 4 .py files
+  → read_file("/model/ssd_mobilenet.py")
+  [COMPACTION fires here — context exceeds 15K,
+   middle messages trimmed, head + tail preserved]
+  → read_file("/model/preprocessor.py")
+At call 20, the agent returns a summary without tool calls. The loop would
+normally exit, but the LLMCompletionCheckHook intercepts:
+End hook fires:
+  Judge model reviews tool call log:
+  "Agent read 12 of 44 files. Multiple directories
+   unexplored. INCOMPLETE."
+  → Injects: "You are not done. Continue reviewing
+    the remaining directories."
+Calls 21-35 (Resumed — reads remaining directories):
+  → read_file (continuing through /protos, /training)
+  [COMPACTION fires twice more — sawtooth pattern]
+  → todo_write: mark remaining items complete
+Call 36 (Final summary):
+  Agent produces architecture review with findings.
+  End hook fires again → Judge: "COMPLETE."
+  → Loop exits.
+The trace reveals the three mechanisms working together: the PlanningHook
+gave the agent structure (call 1), compaction kept context bounded (calls
+16-35), and the completion hook prevented early stopping (call 20).
+Without any one of these, the review would have been incomplete,
+unstructured, or would have overflowed the context window.
+That trace is one configuration. To understand how each piece contributes,
+we run the same task under five configurations and compare. The full
+experiment with charts and judge reasoning is in the companion notebook
+(compaction.ipynb in examples/contextengineering).
+
+@@PAGE 493@@
+Table 15.1: Code review performance across compaction strategies. Quality is an LLM-as-judge average of completeness and actionability scores. Isolation total includes coordinator
+(39K) plus sub-agent tokens (79K across 51 LLM calls).
+Configuration
+Input
+Tokens
+LLM
+Calls
+Files
+Read
+Duplicates Quality
+NoCompaction
+915,591
+50
+16/44
+27%
+6.0/10
+HeadTail 8k
+276,390
+50
+14/44
+55%
+4.0/10
+HeadTail 
+8k 
+(no
+hook)
+144,136
+32
+17/44
+15%
+5.5/10
+HeadTail 15k
+402,102
+46
+14/44
+46%
+5.1/10
+Isolation
+118,824
+66
+48 (sub)
+0%
+4.5/10
+15.5.3 What the Data Shows
+Three findings stand out from Table 15.1:
+The sawtooth is the healthy pattern. With a well-sized budget, context
+grows until it exceeds the budget, compaction trims it, and it grows again.
+Monotonic growth (NoCompaction) means the agent drags along stale
+context indefinitely. A flat line at the budget (HeadTail 8k) means
+compaction fires on nearly every call, leaving the agent with too little
+working memory.
+Too-tight budgets cause thrashing, not savings. The 8k configuration had
+55% duplicate file reads. The agent reads a file, compaction drops it from
+context, and the agent reads the same file again because it has no memory
+of having seen it. Tighter budgets reallocate tokens into wasted re-reads
+rather than saving them.
+Hooks and compaction interact. Compare HeadTail 8k with and without
+the completion hook. Without it: 32 calls, 15% duplicates, 5.5 quality. With
+it: 50 calls, 55% duplicates, 4.0 quality. The hook correctly identified
+incomplete work and pushed the agent back — but with an 8k budget, the
+agent had already lost its recent work to compaction, so it re-read files
+instead of continuing. With a larger budget, hooks work as intended because
+the agent retains enough context to pick up where it left off.
+
+@@PAGE 494@@
+The practical rule: size the compaction budget at 2-3x the agent’s working
+set per step. If your duplicate read ratio exceeds 15%, the budget is too
+tight.
+15.6 Practical Considerations
+Iteration limits: Set max_iterations based on task complexity. Simple scripts:
+10-20. Multi-file projects: 30-50. Complex reviews or refactoring: 50-100.
+Too low causes premature termination. Too high wastes compute on
+thrashing agents.
+Compaction budget: For tasks touching many files, use HeadTailCompaction.
+Start with a budget of 25-50K tokens and adjust based on duplicate read
+rates. For short tasks (under 10 tool calls), no compaction is needed.
+Workspace isolation: Always scope file tools to a workspace directory.
+This prevents the agent from accessing files outside the project or
+modifying system files:
+tools = create_coding_tools(workspace=Path("./project"))
+Cost tracking: Monitor response.usage to understand token consumption:
+u = response.usage
+print(f"LLM calls: {u.llm_calls}")
+print(f"Tokens: {u.tokens_input + u.tokens_output}")
+15.7 Key Insights
+ 
+1. Tools are prerequisites, not guarantees. Having write_file doesn’t
+mean the agent writes good code. Quality depends on the LLM’s
+training, the prompt’s guidance, and feedback from execution tools.
+2. Prompts encode expertise. The prompt is where you encode best
+practices, workflow patterns, and completion criteria. A well-crafted
+
+@@PAGE 495@@
+prompt transforms a general-purpose LLM into a specialized coding
+assistant.
+3. Memory enables improvement. Without memory, each task starts
+from zero. With memory, patterns accumulate and mistakes are
+recorded. The agent becomes more capable over time.
+4. Completion needs external verification. Prompt-based criteria work
+for short tasks. For long-running tasks, hooks provide external
+verification that the agent has actually finished, not just decided to
+stop.
+5. Context engineering enables scale. A 5-iteration task works without
+compaction. A 50-iteration code review across 44 files does not.
+Compaction, hooks, and isolation (all covered in Section  4.12) are
+what separate a demo agent from one that handles real work.
+15.8 Summary
+A software engineering agent’s capability emerges from tools, prompts,
+memory, and context engineering working together. Tools define what
+actions are possible. Prompts encode how to use them effectively. Memory
+enables learning across tasks. Context engineering — compaction, hooks,
+and isolation — sustains performance as tasks grow beyond what fits in a
+single context window. The code review experiment shows these are not
+theoretical concerns: without the right configuration, a 44-file review
+degrades into thrashing, early stopping, or runaway token costs.
+15.9 Exercises
+ 
+1. Add a code review tool: Implement a lint_file tool that runs static
+analysis (e.g., pylint, flake8). Update the agent’s prompt to include code
+quality checks before completion.
+2. Implement checkpointing: Modify the memory system to save
+progress after each completed subtask. Allow resuming from
+
+@@PAGE 496@@
+checkpoints if execution is interrupted.
+3. Multi-language support: Extend the agent to handle JavaScript
+projects. What new tools are needed? How should the prompt change?
+4. Prompt ablation study: Remove different sections from the prompt
+(memory check, planning, completion criteria). Measure the impact on
+task success rate.
+5. Compaction budget tuning: Run the code review notebook with
+different token_budget values (8K, 15K, 25K, 50K). Compare duplicate
+read rates, file coverage, and quality scores. At what budget does
+thrashing disappear?
+OceanofPDF.com

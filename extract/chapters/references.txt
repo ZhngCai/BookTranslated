@@ -1,0 +1,265 @@
+
+@@PAGE 521@@
+References
+Abuelsaad, Tamer, Deepak Akkil, Prasenjit Dey, Aditya Vempaty, and Ravi
+Kokku. 2024. “Agent-e: From Autonomous Web Navigation to
+Foundational Design Principles in Agentic Systems.” arXiv Preprint
+arXiv:2407.13032.
+Anthropic. 2024a. “Introducing Computer Use, a New Claude 3.5 Sonnet,
+and 
+Claude 
+3.5 
+Haiku.” 
+Anthropic 
+News.
+https://www.anthropic.com/news/3-5-models-and-computer-use.
+———. 
+2024b. 
+“Introducing 
+the 
+Model 
+Context 
+Protocol.”
+https://www.anthropic.com/news/model-context-protocol.
+———. 
+2024c. 
+“Model 
+Context 
+Protocol 
+Specification.”
+https://spec.modelcontextprotocol.io/.
+Appel, Ruth, Peter McCrory, Alex Tamkin, Michael Stern, Miles McCain,
+and Tyler Neylo. 2025. “Anthropic Economic Index Report: Uneven
+Geographic and Enterprise AI Adoption.” Anthropic Research.
+https://www.anthropic.com/research/anthropic-economic-index-
+september-2025-report.
+Bansal, Gagan, Jennifer Wortman Vaughan, Saleema Amershi, Eric Horvitz,
+Adam Fourney, Hussein Mozannar, Victor Dibia, and Daniel S Weld.
+2024. “Challenges in Human-Agent Communication.” arXiv Preprint
+arXiv:2412.10380.
+Boateng, Emmanuel Aboah, Cassiano O Becker, Nabiha Asghar, Kabir
+Walia, Ashwin Srinivasan, Ehi Nosakhare, Soundar Srinivasan, and
+Victor Dibia. 2024. “Concept Distillation from Strong to Weak Models
+via 
+Hypotheses-to-Theories 
+Prompting.” 
+arXiv 
+Preprint
+arXiv:2408.09365.
+Brown, Tom B., Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared
+Kaplan, Prafulla Dhariwal, Arvind Neelakantan, et al. 2020.
+“Language Models Are Few-Shot Learners.” Advances in Neural
+Information Processing Systems 33: 1877–1901.
+Cheng, Kanzhi, Qiushi Sun, Yougang Chu, Fangzhi Xu, Yantao Li, Jianbing
+Zhang, and Zhiyong Wu. 2024. “Seeclick: Harnessing Gui Grounding
+for Advanced Visual Gui Agents.” arXiv Preprint arXiv:2401.10935.
+
+@@PAGE 522@@
+Dell’Acqua, Fabrizio, Edward McFowland III, Ethan R Mollick, Hila
+Lifshitz-Assaf, Katherine Kellogg, Saran Rajendran, Lisa Krayer,
+François Candelon, and Karim R Lakhani. 2023. “Navigating the
+Jagged Technological Frontier: Field Experimental Evidence of the
+Effects of AI on Knowledge Worker Productivity and Quality.”
+Harvard Business School Technology & Operations Mgt. Unit
+Working Paper, no. 24-013.
+Dibia, Victor. 2023. “LIDA: A Tool for Automatic Generation of Grammar-
+Agnostic Visualizations and Infographics Using Large Language
+Models.” arXiv Preprint arXiv:2303.02927.
+Dibia, Victor, Jingya Chen, Gagan Bansal, Suff Syed, Adam Fourney,
+Erkang Zhu, Chi Wang, and Saleema Amershi. 2024. “Autogen
+Studio: A No-Code Developer Tool for Building and Debugging
+Multi-Agent Systems.” arXiv Preprint arXiv:2408.15247.
+Dibia, Victor, Adam Fourney, Gagan Bansal, Forough Poursabzi-Sangdeh,
+Han Liu, and Saleema Amershi. 2022. “Aligning Offline Metrics and
+Human Judgments of Value for Code Generation Models.” arXiv
+Preprint arXiv:2210.16494.
+Du, Yilun, Shuang Li, Antonio Torralba, Joshua B. Tenenbaum, and Igor
+Mordatch. 2023. “Improving Factuality and Reasoning in Language
+Models 
+Through 
+Multiagent 
+Debate.” 
+arXiv 
+Preprint
+arXiv:2305.14325.
+Epperson, Will, Gagan Bansal, Victor C Dibia, Adam Fourney, Jack Gerrits,
+Erkang Zhu, and Saleema Amershi. 2025. “Interactive Debugging and
+Steering of Multi-Agent Ai Systems.” In Proceedings of the 2025 CHI
+Conference on Human Factors in Computing Systems, 1–15.
+FlowiseAI. 
+2024. 
+“Flowise: 
+Build 
+AI 
+Agents, 
+Visually.”
+https://flowiseai.com/.
+Fourney, Adam, Gagan Bansal, Hussein Mozannar, Cheng Tan, Eduardo
+Salinas, Friederike Niedtner, Grace Proebsting, et al. 2024. “Magentic-
+One: A Generalist Multi-Agent System for Solving Complex Tasks.”
+arXiv Preprint arXiv:2411.04468.
+Greenblatt, Ryan, Carson Denison, Benjamin Wright, Fabien Roger, Monte
+MacDiarmid, Sam Marks, Johannes Treutlein, et al. 2024. “Alignment
+Faking in Large Language Models.” arXiv Preprint arXiv:2412.14093.
+Hadfield, Jeremy, Barry Zhang, Kenneth Lien, Florian Scholz, Jeremy Fox,
+and Daniel Ford. 2025. “How We Built Our Multi-Agent Research
+
+@@PAGE 523@@
+System.” 
+Anthropic 
+Engineering 
+Blog.
+https://www.anthropic.com/engineering/multi-agent-research-system.
+Jimenez, Carlos E, John Yang, Alexander Wettig, Shunyu Yao, Kexin Pei,
+Ofir Press, and Karthik Narasimhan. 2023. “SWE-Bench: Can
+Language Models Resolve Real-World GitHub Issues?” arXiv
+Preprint arXiv:2310.06770.
+Kwa, Thomas, Ben West, Joel Becker, Amy Deng, Katharyn Garcia, Max
+Hasin, Sami Jawhar, et al. 2025. “Measuring AI Ability to Complete
+Long Tasks.” arXiv Preprint arXiv:2503.14499.
+Li, Ang, Yin Zhou, Vethavikashini Chithrra Raghuram, Tom Goldstein, and
+Micah Goldblum. 2024. “Commercial LLM Agents Are Already
+Vulnerable to Simple yet Dangerous Attacks.” arXiv Preprint
+arXiv:2502.08586.
+Liang, Tian, Zhiwei He, Wenxiang Jiao, Xing Wang, Yan Wang, Rui Wang,
+Yujiu Yang, Zhaopeng Tu, and Shuming Shi. 2023. “Encouraging
+Divergent Thinking in Large Language Models Through Multi-Agent
+Debate.” arXiv Preprint arXiv:2305.19118.
+Linux Foundation. 2025. “Linux Foundation Launches the Agent2Agent
+Protocol 
+Project.” 
+https://www.linuxfoundation.org/press/linux-
+foundation-launches-the-agent2agent-protocol-project-to-enable-
+secure-intelligent-communication-between-ai-agents.
+Liu, Nelson F., Kevin Lin, John Hewitt, Ashwin Paranjape, Michele
+Bevilacqua, Fabio Petroni, and Percy Liang. 2024. “Lost in the
+Middle: How Language Models Use Long Contexts.” Transactions of
+the Association for Computational Linguistics 12: 157–73.
+Lu, Yadong, Jianwei Yang, Yelong Shen, and Ahmed Awadallah. 2024.
+“OmniParser for Pure Vision Based GUI Agent.” arXiv Preprint
+arXiv:2408.00203.
+Lu, Yujia, Yichen Qian, Yue Chen, Yi Xie, Yufeng Feng, Xiaodan Lyu,
+Wenxuan Zhang, Wayne Xin Zhao, Ji-Rong Wen, and Ruiming Tang.
+2025. “UI-TARS: Pioneering Automated GUI Interaction with Native
+Agents.” arXiv Preprint arXiv:2501.12326.
+Luo, Xufang, Yuge Zhang, Zhiyuan He, Zilong Wang, Siyun Zhao,
+Dongsheng Li, Luna K. Qiu, and Yuqing Yang. 2025. “Agent
+Lightning: Train ANY AI Agents with Reinforcement Learning.”
+https://arxiv.org/abs/2508.03680.
+
+@@PAGE 524@@
+Lynch, Aengus, Benjamin Wright, Caleb Larson, Kevin K. Troy, Stuart J.
+Ritchie, Sören Mindermann, Ethan Perez, and Evan Hubinger. 2025.
+“Agentic Misalignment: How LLMs Could Be an Insider Threat.”
+Anthropic Research.
+Manus AI. 2025. “Manus: General AI Agent.” https://manus.im/.
+Meta AI. 2025. “Agents Rule of Two: A Practical Approach to AI Agent
+Security.” https://ai.meta.com/blog/practical-ai-agent-security/.
+Mialon, Grégoire, Clémentine Fourrier, Craig Swift, Thomas Wolf, Yann
+LeCun, and Thomas Scialom. 2023. “GAIA: A Benchmark for
+General AI Assistants.” arXiv Preprint arXiv:2311.12983.
+Microsoft AI Blog. 2024. “AI at Work Is Here. Now Comes the Hard Part.”
+https://www.microsoft.com/en-us/worklab/work-trend-index/ai-at-
+work-is-here-now-comes-the-hard-part.
+Microsoft 
+Research. 
+2023. 
+“AutoGen: 
+Multi-Agent 
+Conversation
+Framework.” https://github.com/microsoft/autogen.
+Minsky, Marvin. 1986. The Society of Mind. Simon; Schuster.
+Mozannar, Hussein, Gagan Bansal, Cheng Tan, Adam Fourney, Victor
+Dibia, Jingya Chen, Jack Gerrits, et al. 2025. “Magentic-UI: Towards
+Human-in-the-Loop 
+Agentic 
+Systems.” 
+arXiv 
+Preprint
+arXiv:2507.22358.
+n8n 
+GmbH. 
+2024. 
+“N8n: AI Workflow Automation 
+Platform.”
+https://n8n.io/.
+OpenAI. 
+2025. 
+“Introducing 
+Operator.” 
+OpenAI 
+Blog.
+https://openai.com/index/introducing-operator/.
+Ouyang, Long, Jeffrey Wu, Xu Jiang, Diogo Almeida, Carroll L.
+Wainwright, Pamela Mishkin, Chong Zhang, et al. 2022. “Training
+Language Models to Follow Instructions with Human Feedback.”
+Advances in Neural Information Processing Systems 35: 27730–44.
+Patwardhan, Tejal, Rachel Dias, Elizabeth Proehl, Grace Kim, Michele
+Wang, Olivia Watkins, Simón Posada Fishman, et al. 2025. “GDPval:
+Evaluating AI Model Performance on Real-World Economically
+Valuable Tasks.” arXiv Preprint arXiv:2510.04374.
+Peng, Sida, Eirini Kalliamvakou, Peter Cihon, and Mert Demirer. 2023.
+“The Impact of Ai on Developer Productivity: Evidence from Github
+Copilot.” arXiv Preprint arXiv:2302.06590.
+Phan, Long, Alice Gatti, Ziwen Han, Nathaniel Li, Josephina Hu, Hugh
+Zhang, Chen Bo Calvin Zhang, et al. 2025. “Humanity’s Last Exam.”
+
+@@PAGE 525@@
+arXiv Preprint arXiv:2501.14249.
+Rein, David, Betty Li Hou, Asa Cooper Stickland, Jackson Petty, Richard
+Yuanzhe Pang, Julien Dirani, Julian Michael, and Samuel R Bowman.
+2023. “GPQA: A Graduate-Level Google-Proof q&a Benchmark.”
+arXiv Preprint arXiv:2311.12022.
+Russell, Stuart, and Peter Norvig. 2020. Artificial Intelligence: A Modern
+Approach. 4th ed. Pearson.
+Shinn, Noah, Federico Cassano, Edward Berman, Ashwin Gopinath,
+Karthik Narasimhan, and Shunyu Yao. 2023. “Reflexion: Language
+Agents with Verbal Reinforcement Learning.” arXiv Preprint
+arXiv:2303.11366.
+Sweller, John. 1988. “Cognitive Load During Problem Solving: Effects on
+Learning.” Cognitive Science 12 (2): 257–85.
+TryCUA. 
+2024. 
+“CUA: 
+Computer 
+Use 
+Agent 
+SDK.”
+https://github.com/trycua/cua.
+Vaswani, Ashish, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion
+Jones, Aidan N Gomez, Lukasz Kaiser, and Illia Polosukhin. 2017.
+“Attention Is All You Need.” Advances in Neural Information
+Processing Systems 30.
+vLLM Team. 2023. “vLLM: Easy, Fast, and Cheap LLM Serving with
+PagedAttention.” https://github.com/vllm-project/vllm.
+Wang, Xilong, John Bloch, Zedian Shao, Yuepeng Hu, Shuyan Zhou, and
+Neil Zhenqiang Gong. 2025. “WebInject: Prompt Injection Attack to
+Web Agents.” arXiv Preprint arXiv:2505.11717.
+Wei, Alexander, Nika Haghtalab, and Jacob Steinhardt. 2023. “Jailbroken:
+How Does Llm Safety Training Fail?” Advances in Neural
+Information Processing Systems 36: 80079–110.
+Wei, Jason, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Brian Ichter,
+Fei Xia, Ed Chi, Quoc Le, and Denny Zhou. 2022. “Chain-of-Thought
+Prompting Elicits Reasoning in Large Language Models.” Advances in
+Neural Information Processing Systems 35: 24824–37.
+Wu, Qingyun, Gagan Bansal, Jieyu Zhang, Yiran Wu, Shaokun Zhang,
+Erkang Zhu, Beibin Li, Li Jiang, Xiaoyun Zhang, and Chi Wang.
+2023. “AutoGen: Enabling Next-Gen LLM Applications via Multi-
+Agent Conversation Framework.” arXiv Preprint arXiv:2308.08155.
+Yan, Walden. 2025. “Don’t Build Multi-Agents.” Cognition AI Blog.
+https://cognition.ai/blog/dont-build-multi-agents.
+
+@@PAGE 526@@
+Yao, Shunyu, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik
+Narasimhan, and Yuan Cao. 2022. “ReAct: Synergizing Reasoning
+and Acting in Language Models.” arXiv Preprint arXiv:2210.03629.
+You, Keen et al. 2024. “Ferret-UI: Grounded Mobile UI Understanding with
+Multimodal LLMs.” arXiv Preprint arXiv:2404.05719.
+Zhang, Chaoyun, Liqun Li, Shilin He, Xu Xu, Bo Qiao, Si Qin, Minghua
+Ma, et al. 2024. “Ufo: A Ui-Focused Agent for Windows Os
+Interaction.” arXiv Preprint arXiv:2402.07939.
+Zhou, Yongchao, Andrei Ioan Muresanu, Ziwen Han, Keiran Paster, Silviu
+Pitis, Harris Chan, and Jimmy Ba. 2022. “Large Language Models Are
+Human-Level Prompt Engineers.” In The Eleventh International
+Conference on Learning Representations.
+OceanofPDF.com

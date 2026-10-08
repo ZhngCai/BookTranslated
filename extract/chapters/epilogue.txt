@@ -1,0 +1,252 @@
+
+@@PAGE 497@@
+Epilogue: Looking Forward
+If you’ve made it this far, thank you for choosing to spend your time with
+this book. You’ve journeyed from fundamental concepts through hands-on
+implementation to real-world applications of multi-agent systems. You’ve
+built agents from scratch, implemented both deterministic workflows and
+autonomous orchestration, and tackled production challenges like
+evaluation, security, and ethics. My hope is that you now have both the
+technical foundation and the judgment to build effective multi-agent systems
+—and to recognize when simpler approaches might serve you better.
+As we reflected in the preface (Figure 1), this journey covered substantial
+ground—15 chapters with 54,940 words of content, illustrated across 27
+tables, 46 figures, and 154 code snippets, along with 76 callout boxes and 73
+references for further exploration.
+Reflections on the AutoGen Story
+Writing about a field that moves this quickly is both exhilarating and
+humbling. When AutoGen began in early 2023 (~June 2023), the idea of
+conversational multi-agent systems was thrilling—autonomous agents
+collaborating through natural dialogue to solve complex problems. Two
+years later, the magic has given way to patterns, trade-offs, and engineering
+discipline.
+Allow me to share a bit more about the beginnings of AutoGen and several
+inflection points along the way.
+AutoGen started as an experimental library from a relatively small group of
+researchers at Microsoft Research to push on the idea of conversational
+programming. We bet that how software will be built will evolve towards a
+setup where agents are defined, and they converse to explore and solve
+arbitrary problems. To this end, we introduced abstractions like the
+ConversableAgent class that could take a model client, system message, a list of
+functions, and a code execution config as arguments. This ConversableAgent
+could send messages and respond to received messages by using an LLM,
+
+@@PAGE 498@@
+calling functions, and executing code as needed. We introduced abstractions
+like GroupChat - a container for multiple agents with various strategies for
+turn-taking (e.g., round-robin, selection by an AI model etc.). And early
+experiments showed promise - we could build agents that could collaborate
+to solve non-trivial tasks as well as improve on performance on existing task
+benchmarks. We learned that the configuration space of multi-agent systems
+can be really large, making it sometimes hard for developers to set the right
+configuration and make sense of system behavior. To address this, I led the
+development of AutoGen Studio (Dibia et al. 2024) - a low-code developer
+app that let users build and compose multi-agent systems from components
+(e.g., add existing tools or models to agents, add existing agents to multi-
+agent orchestrator containers), run and test them in a UI, compare runs,
+make changes, and iterate rapidly.
+Soon enough, limitations in this initial design became apparent. The concept
+of send and receive was implemented using a shared in-memory list which
+agents could append to and read from! The entire framework was mostly
+synchronous, making it challenging to build responsive UI applications
+without hacks. Code execution relied on built-in logic to extract code blocks
+embedded in generated text—this approach failed frequently and was
+unusable with smaller models. It became clear that we needed a more robust
+foundation—a truly asynchronous event-based architecture where agents
+could emit events (message sent, function called, code executed), a runtime
+structure for handling message delivery, and structures for state serialization
+and persistence. The solution we landed on was built on the actor model,
+where each agent manages its own state and communicates exclusively
+through messages. This design enabled message routing by type, topic-based
+subscriptions, and—critically—laid the foundation for distributed agent
+execution where agents could potentially run across different processes or
+even organizational boundaries.
+This led to a complete redesign of the architecture released as AutoGen v0.4
+(January 2025!). Some readers will recognize this as a fracture point in the
+community—with a fork (AG2) that preserved and extended the original
+synchronous design, and the mainline AutoGen moving to the new async
+v0.4 architecture.
+
+@@PAGE 499@@
+The new architecture solved a critical limitation: developers previously
+lacked fine-grained control over message flows and couldn’t easily express
+custom business logic or deterministic workflows. We addressed this with a
+two-API approach: AutoGen Core provided low-level message-passing
+primitives where developers could define custom message types, routing
+logic, and explicit control flow, while AgentChat built on top of Core to
+offer 
+high-level 
+presets 
+(AssistantAgent, 
+team 
+patterns 
+like
+RoundRobinGroupChat) for rapid prototyping of autonomous agent teams.
+This let developers choose their trade-off—Core for explicit control when
+business logic demands it, AgentChat for speed when autonomous
+coordination suffices. One of the things we learned was that most developers
+initially gravitated toward AgentChat’s simplicity, which validated having
+sensible defaults. We also learned that while the Core architecture enabled
+distributed runtimes (agents running on different machines), this capability
+was rarely used in practice—most real-world applications ran fine in a single
+process.
+Fast forward to October 2025 (when this book is being released). Even
+though AutoGen had evolved and gained widespread adoption, there were
+other agent frameworks—even from Microsoft! Specifically, Semantic
+Kernel (also MIT-licensed and open source), which emerged at about the
+same time as AutoGen, pioneered enterprise-grade agent capabilities with
+plugins and orchestration patterns, strong support for the C# and .NET
+ecosystem, and full enterprise tooling. This created real confusion for
+developers: which framework should I choose? The natural next step was to
+bring the best of both worlds together—the robust multi-agent orchestration
+and developer experience from AutoGen with the production readiness and
+enterprise support of Semantic Kernel. I am excited that we reached a point
+where this could happen. This led to the Microsoft Agent Framework,
+which is now the recommended way to build multi-agent systems at
+Microsoft. Rather than “yet another framework,” think of it as a major
+version revision—consolidating learnings from both projects into a unified
+foundation 
+with 
+async-first 
+design, 
+workflow 
+abstractions 
+with
+checkpointing and human-in-the-loop support, middleware for security and
+observability, and strong support for both Python and C#.
+I had started writing this book in December 2023 (it’s taken almost 2 years
+to write it!) and the initial drafts were based on AutoGen. However, as the
+
+@@PAGE 500@@
+field evolved and as I wrote, I realized focusing on fundamental concepts
+and building from scratch was the right approach for the book’s longevity.
+Building picoagents from scratch across Chapter 4 through Chapter 8 was
+deliberate. I wanted you to see every component, every design decision,
+every trade-off. Not because you should necessarily build your own
+framework—excellent tools exist—but because understanding what happens
+under the hood makes you a better systems architect. When you evaluate
+frameworks, debug production issues, or design custom components, this
+foundational knowledge will serve you well.
+The production case studies in Part IV emerged from real challenges I’ve
+seen teams face: processing large volumes of unstructured data (Chapter 14),
+building reliable workflows with cost constraints, and deploying systems
+that users actually want to use. Part IV shows patterns you can adapt to your
+domains.
+Looking Forward
+Most of what we have covered in this book is truly the software stack that
+lives around an AI model. An agent is, after all, a loop in which an AI model
+is invoked repeatedly to make decisions, take actions, and reason about its
+environment and results from actions. And a multi-agent system is simply a
+collection of such agents with an expanded loop or coordination logic
+(which may also be driven by AI models).
+The point here is that at the heart of this entire field is the AI model. Today,
+the agentic loop (including multiagent patterns discussed in chapter
+Chapter 2) mostly exists to address issues the model cannot solve on its own,
+and I have seen responsibilities shift as models have become better. I recall
+that the initial version of AutoGen required almost two pages worth of
+system instructions paired with the best openai model at the time to provide
+decent results. We previously needed to provide extensive instructions to
+models on coordination, how to generate code blocks for extraction, how to
+generate structured JSON, how to become aware of tools and use them
+appropriately, provide them with specialized tools for audio and video
+processing (e.g., use special models to generate text descriptions for images
+
+@@PAGE 501@@
+and audio), etc. We no longer have to do these, because modern LLMs are
+becoming more agent-native with structured output, tool use, computer use
+(Chapter 5), multimodal understanding, etc.
+I expect this trend to continue—more responsibility pushed up the stack into
+models and our agentic scaffolds get lighter or become more of control
+points for human oversight, evaluation, monitoring, etc. The diagram below
+illustrates this shift: as model capabilities improve, the complexity of agentic
+loops decreases, yet system performance continues to rise. Better models
+require less scaffolding work, which paradoxically leads to better overall
+systems because there’s less complexity to maintain and debug. As a
+developer, invest in your agentic stack and design with an expectation of
+model improvements and shifting responsibilities when that becomes
+possible.
+
+@@PAGE 502@@
+Figure 15.1: The inverse relationship between model capabilities and agent scaffolding complexity. As models improve (black line), the complexity of agentic loops decreases (blue
+dotted line), while overall system performance rises (gray line). The accelerating performance curve reflects the compound benefit of more capable models requiring less scaffolding
+overhead.
+As these capabilities mature, I expect the field to evolve through distinct
+phases that roughly map to the orchestration patterns taxonomy from
+
+@@PAGE 503@@
+Chapter 2. Phase 1 (happening now) is dominated by workflow patterns—
+deterministic, explicit control where developers define execution paths
+through sequential, conditional, and parallel workflows. These patterns are
+well-understood, leverage existing software engineering practices, and offer
+the reliability needed for production deployments today. Phase 2 will see
+broader adoption of autonomous patterns—plan-based orchestration,
+handoffs, and conversation-driven coordination where AI models drive
+control flow at runtime. These patterns currently face reliability challenges
+mostly related to model capabilities today(unexpected behaviors, higher
+costs, difficulty debugging), but they offer the flexibility needed for
+complex, dynamic tasks where solutions cannot be predetermined. In my
+opinion, this is where the most growth potential lies; teams that build for this
+scenario will benefit from new capabilities as the underlying model
+improves. Phase 3 will bring integration—general-purpose assistants that
+reliably handle diverse tasks by automatically selecting between workflow
+patterns for high-stakes operations and autonomous patterns for exploratory
+work, incorporating lessons learned from earlier phases. Alongside this
+evolution, we’ll likely see the rise of agent marketplaces—reusable agents
+and multi-agent teams for common problems like research, content
+generation, and data analysis. These marketplaces will require shared
+declarative specifications or standards for representing agents (similar to
+how Docker has Dockerfiles or Kubernetes has YAML manifests), enabling
+anyone to publish an agent in a portable format that can be instantiated
+across different frameworks and environments. The serialization foundations
+we covered in Section 4.1 point toward this direction, making sophisticated
+patterns accessible without requiring deep agent design expertise.
+Final Thoughts
+A good realization to walk away with here is that multi-agent systems aren’t
+magic—they’re software built with AI components. They need the same
+engineering rigor as any complex system, plus new practices for emergent
+behavior.
+The goal shouldn’t be to use agents everywhere, but to use them effectively
+where they make sense. Sometimes a script is better. Sometimes a single
+agent beats multiple agents. Sometimes deterministic workflows beat
+
+@@PAGE 504@@
+autonomous orchestration. Good judgment comes from understanding the
+fundamentals and a practice of evaluation-driven design (Chapter 10).
+Core principles will endure: task decomposition, evaluation, observability,
+human oversight, responsible deployment. Build on that foundation.
+If you extend picoagents or build production systems, share what you learn.
+The field needs practitioners documenting both successes and spectacular
+failures.
+I’m excited to see what you build.
+Beyond the Book
+Given how rapidly the AI agent space is evolving, the learning journey
+should extend beyond what we have covered in this book. Natural next steps
+include exploring implementations across multiple use cases, applying these
+concepts with production-ready frameworks, and staying current with new
+models and emerging practices. To support this continued learning, I have
+built companion resources and a digital platform that extends the
+foundations you have learned here.
+Open Resources
+The companion code repository at github.com/victordibia/designing-
+multiagent-systems contains all picoagents source code and book examples.
+New patterns and examples are added as the field evolves.
+The book website at multiagentbook.com/labs provides interactive labs
+including framework comparisons, multi-agent use case implementations
+across different frameworks (Microsoft Agent Framework, LangGraph,
+PydanticAI, AutoGen), and visualizations of AI agent market trends.
+Digital Platform
+The digital platform at buy.multiagentbook.com provides continuously
+updated PDF and EPUB files through quarterly releases. As frameworks
+mature and new patterns emerge, digital customers receive updated content
+
+@@PAGE 505@@
+reflecting current best practices. Packages for professional and enterprise
+users include production-ready application samples with complete UI
+implementations, deployment guides, and cost optimization strategies—
+demonstrating patterns from Part IV as full-stack applications you can adapt
+to your domains.
+The print edition contains the complete book content as published. Print and
+digital editions are separate products with different update models—details
+on packages and pricing available at buy.multiagentbook.com.
+Victor Dibia October 2025
+OceanofPDF.com

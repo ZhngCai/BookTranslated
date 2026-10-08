@@ -1,0 +1,194 @@
+
+@@PAGE 1@@
+
+@@PAGE 2@@
+Designing Multi-Agent Systems
+Principles, Patterns, and Implementation for AI Agents
+Victor Dibia
+2025-11-01
+OceanofPDF.com
+
+@@PAGE 3@@
+Table of contents
+ 
+1. Preface
+1. About This Book
+2. Who This Book Is For
+3. What Makes This Book Different
+4. Prerequisites
+5. Implementation Philosophy
+6. How This Book Is Organized
+7. Code Examples and Resources
+8. References and Academic Sources
+9. Acknowledgments
+2. 1 Understanding Multi-Agent Systems
+1. 1.1 Introduction
+2. 1.2 A Primer on Generative AI
+3. 1.3 Why Multiple Agents? Complex Task Characteristics
+4. 1.4 What is an Agent?
+5. 1.5 What is a Multi-Agent System?
+6. 1.6 Why Now?
+7. 1.7 Choosing the Right AI Agent Architecture
+8. 1.8 Building Your First Multi-Agent System
+9. 1.9 Summary
+3. 2 Multi-Agent Patterns
+1. 2.1 A Taxonomy of Multi-Agent Orchestration Patterns
+2. 2.2 Workflow Patterns (Explicit Control)
+3. 2.3 Autonomous Patterns (Emergent Control)
+4. 2.4 Pattern Selection and Comparison
+5. 2.5 Task Management Patterns
+6. 2.6 Summary
+4. 3 UX Principles for Multi-Agent Systems
+1. 3.1 Background: The Evolution of Interfaces and Software
+Development
+2. 3.2 The Multi-Agent Reliability Challenge
+3. 3.3 Multi-Agent User Personas and Challenges
+4. 3.4 Multi-Agent UX Design Principles
+
+@@PAGE 4@@
+5. 3.5 Interactive vs Offline Multi-Agent Scenarios
+6. 3.6 Summary
+5. 4 Building Your First Agent
+1. 4.1 Design Principles
+2. 4.2 The Agent Execution Loop
+3. 4.3 Task Cancellation
+4. 4.4 Adding a Model Client
+5. 4.5 Enabling Structured Output - The Key to Reliable Agents
+6. 4.6 Adding Tools
+7. 4.7 Adding Memory
+8. 4.8 Agent-Managed Memory
+9. 4.9 Adding Agent Middleware for Control and Observability
+10. 4.10 OpenTelemetry: Industry-Standard Observability
+11. 4.11 Agents as Tools
+12. 4.12 Context Engineering
+13. 4.13 Adding Humans in the Loop
+14. 4.14 Summary
+6. 5 Building Computer Use Agents
+1. 5.1 When Code and APIs Aren’t Enough: The Role of Computer
+Use Agents
+2. 5.2 The Anatomy of a Computer Use Agent
+3. 5.3 Interface Representation
+4. 5.4 Action Executor (Interface Automation Tools)
+5. 5.5 Implementing a Computer Use Agent
+6. 5.6 Key Challenges in Computer Use Agents
+7. 5.7 Production Considerations
+8. 5.8 Summary
+7. 6 Building Multi-Agent Workflows
+1. 6.1 Workflows as Computational Graphs
+2. 6.2 Adding Steps: Units of Computation
+3. 6.3 Adding Edges: Connecting Steps with Transitions
+4. 6.4 Building the Workflow Class
+5. 6.5 Building the Workflow Runner
+6. 6.6 Workflow Serialization and Persistence
+7. 6.7 Workflow Checkpointing
+8. 6.8 Summary
+8. 7 Building Autonomous Multi-Agent Orchestration
+
+@@PAGE 5@@
+1. 7.1 The Orchestrator Loop
+2. 7.2 Building Termination Conditions
+3. 7.3 Implementing Round-Robin Orchestration
+4. 7.4 AI-Driven Orchestration
+5. 7.5 Plan-Based Orchestration
+6. 7.6 Exercises
+7. 7.7 Summary
+9. 8 Building Modern Web Experiences for Agent Applications
+1. 8.1 Why Agent Applications Are Different
+2. 8.2 The Two Components of Agent Web Applications
+3. 8.3 Python-Native Frameworks
+4. 8.4 Building a Complete Agent Web Application from Scratch
+5. 8.5 From Vanilla JavaScript to React
+6. 8.6 WebSockets vs Server-Sent Events: Choosing Your Streaming
+Strategy
+7. 8.7 Deployment and Scaling Considerations
+8. 8.8 Exercises
+9. 8.9 Summary
+10. 9 But What About Multi-Agent Frameworks?
+1. 9.1 Why Consider a Framework at All?
+2. 9.2 Ten Core Framework Capabilities
+3. 9.3 Framework Evaluation and Decision Process
+4. 9.4 Production Capabilities Beyond Educational Implementations
+5. 9.5 Summary
+11. 10 Evaluating Multi-Agent Systems
+1. 10.1 Introduction
+2. 10.2 Evaluation-Driven Development
+3. 10.3 What We’re Evaluating: Multiagent Trajectories
+4. 10.4 Designing Evaluation Suites
+5. 10.5 How We Evaluate: Metrics and Judges
+6. 10.6 Building a Practical Evaluation Harness
+7. 10.7 Exercises
+8. 10.8 Related Research and Datasets
+9. 10.9 Summary
+12. 11 Optimizing Multi-Agent Systems
+1. 11.1 Introduction
+2. 11.2 What to Optimize, When to Optimize, and How to Optimize
+
+@@PAGE 6@@
+3. 11.3 Why Autonomous Multi-Agent Systems Fail in Production
+4. 11.4 Summary
+13. 12 Protocols for Distributed Agents
+1. 12.1 Core Concepts for Distributed Agents
+2. 12.2 Model Context Protocol (MCP)
+3. 12.3 Agent-to-Agent Protocol (A2A)
+4. 12.4 Security Considerations
+5. 12.5 Making Protocol Decisions
+6. 12.6 Summary
+14. 13 Ethics and Responsible AI for Multi-Agent Systems
+1. 13.1 Traditional AI Ethics vs. Agentic Ethics
+2. 13.2 Accelerating Agent Capabilities
+3. 13.3 Societal Challenges at Scale
+4. 13.4 Security: When Agents Can Act
+5. 13.5 Ethical Deployment Checklist
+6. 13.6 Summary
+15. 14 Answering Business Questions from Unstructured Data
+1. 14.1 The Unstructured Data Challenge
+2. 14.2 Expressing the Task as a Workflow
+3. 14.3 Step 1: Data Loading with Intelligent Caching
+4. 14.4 Step 2: Cost-Effective Pre-Filtering
+5. 14.5 Step 3: Structured LLM Analysis
+6. 14.6 Step 4: Analysis and Insight Generation
+7. 14.7 Testing Each Component Independently
+8. 14.8 Results and Validation
+9. 14.9 Current Results
+10. 14.10 Applying These Patterns to Business Problems
+11. 14.11 Limitations and Future Optimizations
+12. 14.12 Summary
+16. 15 Building a Software Engineering Agent
+1. 15.1 Introduction
+2. 15.2 Designing Tools for a Software Engineering Agent
+3. 15.3 The Critical Role of Prompts
+4. 15.4 How Task Completion Works
+5. 15.5 A Complete Example: Code Review Agent
+6. 15.6 Practical Considerations
+7. 15.7 Key Insights
+
+@@PAGE 7@@
+8. 15.8 Summary
+9. 15.9 Exercises
+17. Epilogue: Looking Forward
+1. Reflections on the AutoGen Story
+2. Looking Forward
+3. Final Thoughts
+4. Beyond the Book
+18. Glossary of Terms in Multi-Agent Systems
+1. A
+2. C
+3. D
+4. E
+5. G
+6. H
+7. I
+8. J
+9. L
+10. M
+11. O
+12. P
+13. R
+14. S
+15. T
+19. References
+ 
+1. Title Page
+2. Cover
+3. Table of Contents
+OceanofPDF.com

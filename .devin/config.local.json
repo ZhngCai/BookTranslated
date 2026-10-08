@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Exec(python3)",
+      "Exec(pip3 install)",
+      "Exec(cd)",
+      "Exec(mkdir)",
+      "Exec(fc-list)",
+      "Exec(ls)",
+      "Exec(sed)",
+      "Exec(cat)",
+      "Exec(grep)",
+      "Exec(\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\")"
+    ]
+  }
+}
