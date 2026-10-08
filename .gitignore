@@ -1,0 +1,11 @@
+# macOS 系统文件
+.DS_Store
+
+# 本地工具配置
+.devin/config.local.json
+
+# 原书 PDF（版权归原作者 Victor Dibia，请勿分发）
+Designing_Multi-Agent_Systems.pdf
+
+# 原书提取内容（原文文本与插图，版权归原作者）
+extract/
